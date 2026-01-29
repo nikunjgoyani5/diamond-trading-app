@@ -1,0 +1,8 @@
+{
+  "name": "reyu-diamond",
+  "private": true,
+  "scripts": {
+    "client": "npm run dev --prefix client",
+    "build:client": "npm run build --prefix client"
+  }
+}
