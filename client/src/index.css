@@ -2,3 +2,303 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reyu Diamond Design System - Premium Diamond Trading Platform
+   A luxury-inspired aesthetic with crystalline elegance */
+
+@layer base {
+  :root {
+    /* Core Brand Colors - Diamond Inspired Palette */
+    --background: 220 20% 98%;
+    --foreground: 220 25% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 25% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 25% 12%;
+
+    /* Midnight Blue - Primary Brand */
+    --primary: 220 45% 20%;
+    --primary-foreground: 45 30% 96%;
+
+    /* Pearl Grey - Secondary */
+    --secondary: 220 15% 94%;
+    --secondary-foreground: 220 25% 20%;
+
+    /* Soft Muted Tones */
+    --muted: 220 15% 92%;
+    --muted-foreground: 220 10% 45%;
+
+    /* Champagne Gold - Accent */
+    --accent: 38 55% 65%;
+    --accent-foreground: 220 25% 12%;
+
+    /* States */
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders & Inputs */
+    --border: 220 20% 88%;
+    --input: 220 20% 90%;
+    --ring: 38 55% 65%;
+
+    --radius: 0.75rem;
+
+    /* Extended Palette */
+    --diamond-white: 220 30% 99%;
+    --diamond-shimmer: 220 40% 96%;
+    --graphite: 220 15% 25%;
+    --pearl: 45 20% 95%;
+    --midnight: 220 50% 15%;
+    --champagne: 38 55% 65%;
+    --champagne-light: 38 45% 85%;
+    --ice: 200 30% 97%;
+    --silver: 220 15% 75%;
+
+    /* Gradients */
+    --gradient-diamond: linear-gradient(135deg, hsl(220 30% 99%) 0%, hsl(220 40% 96%) 50%, hsl(45 20% 95%) 100%);
+    --gradient-midnight: linear-gradient(135deg, hsl(220 50% 15%) 0%, hsl(220 45% 25%) 100%);
+    --gradient-champagne: linear-gradient(135deg, hsl(38 55% 65%) 0%, hsl(38 45% 75%) 100%);
+    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.6) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(220 20% 98%) 0%, hsl(220 25% 95%) 100%);
+
+    /* Shadows */
+    --shadow-soft: 0 4px 20px -4px hsl(220 25% 12% / 0.08);
+    --shadow-card: 0 8px 30px -8px hsl(220 25% 12% / 0.1);
+    --shadow-elevated: 0 16px 50px -12px hsl(220 25% 12% / 0.15);
+    --shadow-glow: 0 0 40px -10px hsl(38 55% 65% / 0.3);
+
+    /* Sidebar */
+    --sidebar-background: 220 20% 98%;
+    --sidebar-foreground: 220 25% 20%;
+    --sidebar-primary: 220 45% 20%;
+    --sidebar-primary-foreground: 45 30% 96%;
+    --sidebar-accent: 220 15% 94%;
+    --sidebar-accent-foreground: 220 25% 20%;
+    --sidebar-border: 220 20% 88%;
+    --sidebar-ring: 38 55% 65%;
+  }
+
+  .dark {
+    --background: 220 25% 8%;
+    --foreground: 220 15% 95%;
+
+    --card: 220 25% 12%;
+    --card-foreground: 220 15% 95%;
+
+    --popover: 220 25% 12%;
+    --popover-foreground: 220 15% 95%;
+
+    --primary: 38 55% 65%;
+    --primary-foreground: 220 25% 8%;
+
+    --secondary: 220 20% 18%;
+    --secondary-foreground: 220 15% 90%;
+
+    --muted: 220 20% 15%;
+    --muted-foreground: 220 10% 55%;
+
+    --accent: 38 45% 55%;
+    --accent-foreground: 220 15% 95%;
+
+    --destructive: 0 60% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 20% 20%;
+    --input: 220 20% 18%;
+    --ring: 38 55% 65%;
+
+    --diamond-white: 220 25% 15%;
+    --diamond-shimmer: 220 20% 18%;
+    --graphite: 220 15% 70%;
+    --pearl: 45 15% 20%;
+    --midnight: 220 50% 8%;
+    --champagne: 38 55% 65%;
+    --champagne-light: 38 40% 25%;
+    --ice: 200 20% 12%;
+    --silver: 220 15% 40%;
+
+    --sidebar-background: 220 25% 10%;
+    --sidebar-foreground: 220 15% 90%;
+    --sidebar-primary: 38 55% 65%;
+    --sidebar-primary-foreground: 220 25% 8%;
+    --sidebar-accent: 220 20% 15%;
+    --sidebar-accent-foreground: 220 15% 90%;
+    --sidebar-border: 220 20% 18%;
+    --sidebar-ring: 38 55% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@layer components {
+  /* Glass Effect */
+  .glass {
+    @apply bg-white/80 backdrop-blur-xl border border-white/20;
+    box-shadow: var(--shadow-card);
+  }
+
+  .glass-dark {
+    @apply bg-primary/90 backdrop-blur-xl border border-white/10;
+  }
+
+  /* Diamond Shimmer Animation */
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+    animation: shimmer 3s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+
+  /* Diamond Sparkle */
+  .sparkle {
+    position: relative;
+  }
+
+  .sparkle::before {
+    content: '✦';
+    position: absolute;
+    font-size: 0.5em;
+    color: hsl(var(--champagne));
+    animation: sparkle 2s ease-in-out infinite;
+    opacity: 0;
+  }
+
+  @keyframes sparkle {
+    0%, 100% { opacity: 0; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Premium Button Styles */
+  .btn-premium {
+    @apply relative overflow-hidden transition-all duration-500 ease-out;
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(220 45% 28%) 100%);
+  }
+
+  .btn-premium:hover {
+    box-shadow: var(--shadow-elevated), var(--shadow-glow);
+    transform: translateY(-2px);
+  }
+
+  .btn-champagne {
+    @apply relative overflow-hidden transition-all duration-500 ease-out;
+    background: linear-gradient(135deg, hsl(var(--champagne)) 0%, hsl(38 50% 55%) 100%);
+  }
+
+  .btn-champagne:hover {
+    box-shadow: var(--shadow-elevated), 0 0 30px -5px hsl(var(--champagne) / 0.4);
+    transform: translateY(-2px);
+  }
+
+  /* Card Styles */
+  .card-premium {
+    @apply bg-card rounded-2xl transition-all duration-500 ease-out;
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-premium:hover {
+    box-shadow: var(--shadow-elevated);
+    transform: translateY(-4px);
+  }
+
+  /* Text Gradient */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--champagne)) 100%);
+  }
+
+  /* Float Animation */
+  .float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  /* Pulse Glow */
+  .pulse-glow {
+    animation: pulseGlow 3s ease-in-out infinite;
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 20px -5px hsl(var(--champagne) / 0.3); }
+    50% { box-shadow: 0 0 40px -5px hsl(var(--champagne) / 0.5); }
+  }
+
+  /* Hero Background Pattern */
+  .hero-pattern {
+    background-image: 
+      radial-gradient(ellipse 80% 50% at 50% -20%, hsl(var(--champagne) / 0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 50%, hsl(var(--ice) / 0.5) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 40% at 20% 80%, hsl(var(--pearl) / 0.3) 0%, transparent 50%);
+  }
+
+  /* Section Divider */
+  .section-divider {
+    @apply w-24 h-px mx-auto;
+    background: linear-gradient(90deg, transparent, hsl(var(--champagne)), transparent);
+  }
+
+  /* Trust Badge */
+  .trust-badge {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium;
+    background: hsl(var(--diamond-shimmer));
+    color: hsl(var(--primary));
+    border: 1px solid hsl(var(--border));
+  }
+}
+
+@layer utilities {
+  /* Custom Scrollbar */
+  .scrollbar-premium::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-premium::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 3px;
+  }
+
+  .scrollbar-premium::-webkit-scrollbar-thumb {
+    background: hsl(var(--silver));
+    border-radius: 3px;
+  }
+
+  .scrollbar-premium::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--champagne));
+  }
+}
