@@ -1,11 +1,9 @@
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Shield, Gem, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import heroDiamond from "@/assets/hero-diamond.jpg";
 
 const HeroSection = () => {
-     const navigate = useNavigate();
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden hero-pattern">
       {/* Decorative Elements */}
@@ -50,16 +48,14 @@ const HeroSection = () => {
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Button size="lg" className="btn-champagne text-primary group px-8 py-6 text-base"
-              onClick={() => navigate("/register")}>
+              <Button size="lg" className="btn-champagne text-primary group px-8 py-6 text-base">
                 Start Trading
-                
                 <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground px-8 py-6 text-base"onClick={() => navigate("/marketplace")}
+                className="border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground px-8 py-6 text-base"
               >
                 Explore Marketplace
               </Button>

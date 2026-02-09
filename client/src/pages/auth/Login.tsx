@@ -1,32 +1,97 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useToast } from "@/hooks/use-toast";
+import { authActions } from "@/store/slices/authSlice";
+import { useAppDispatch, useAppSelector } from "@/hooks/redux";
+
 import { Diamond, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+
+import { VALIDATION_PATTERNS } from "@/utils/validationHelpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
+/* ----------------------------- schema ----------------------------- */
+const loginSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Email is required")
+    .regex(VALIDATION_PATTERNS.EMAIL.value, VALIDATION_PATTERNS.EMAIL.message),
+  password: z
+    .string()
+    .min(1, "Password is required")
+    .regex(
+      VALIDATION_PATTERNS.PASSWORD.value,
+      VALIDATION_PATTERNS.PASSWORD.message,
+    ),
+  rememberMe: z.boolean().optional(),
+});
+
+type LoginForm = z.infer<typeof loginSchema>;
+
 const Login = () => {
-  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    rememberMe: false,
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const dispatch = useAppDispatch();
+ const { loading, error, isAuthenticated, token } = useAppSelector(
+  (state) => state.auth
+);
+
+useEffect(() => {
+  if (isAuthenticated && token) {
+    navigate("/kyc/start", { replace: true });
+  }
+}, [isAuthenticated, token, navigate]);
+
+
+  useEffect(() => {
+    if (!error) return;
+
+    toast({
+      title: "Login failed",
+      description: error,
+      variant: "destructive",
+    });
+
+    dispatch(authActions.resetAuthError());
+  }, [error, dispatch, toast]);
+
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isValid },
+  } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+    mode: "onChange",
+    defaultValues: {
+      email: "",
+      password: "",
+      rememberMe: false,
+    },
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate login
-    setTimeout(() => {
-      setIsLoading(false);
-      navigate("/dashboard");
-    }, 1500);
-  };
+  const rememberMe = watch("rememberMe");
+
+const onSubmit = (data: LoginForm) => {
+  dispatch(
+    authActions.loginRequest({
+      email: data.email,
+      password: data.password,
+      rememberMe: data.rememberMe,
+    })
+  );
+};
+
 
   return (
     <div className="min-h-screen flex">
@@ -40,8 +105,10 @@ const Login = () => {
         >
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 mb-12">
-            <Diamond className="h-8 w-8 text-champagne" />
-            <span className="font-display text-2xl font-semibold text-primary">Reyu Diamond</span>
+            <Diamond className="h-8 w-8 text-accent" />
+            <span className="font-display text-2xl font-semibold text-primary">
+              Reyu Diamond
+            </span>
           </Link>
 
           {/* Header */}
@@ -55,77 +122,94 @@ const Login = () => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Email */}
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label>Email Address</Label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
-                  id="email"
                   type="email"
                   placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="pl-12 h-12 rounded-xl"
-                  required
+                  {...register("email")}
+                  className={`pl-12 h-12 rounded-xl ${
+                    errors.email
+                      ? "border-red-500 focus-visible:ring-red-500"
+                      : ""
+                  }`}
                 />
               </div>
+              {errors.email && (
+                <p className="text-sm text-red-500">{errors.email.message}</p>
+              )}
             </div>
 
+            {/* Password */}
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label>Password</Label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
-                  id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="pl-12 pr-12 h-12 rounded-xl"
-                  required
+                  {...register("password")}
+                  className={`pl-12 pr-12 h-12 rounded-xl ${
+                    errors.password
+                      ? "border-red-500 focus-visible:ring-red-500"
+                      : ""
+                  }`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
                 </button>
               </div>
+              {errors.password && (
+                <p className="text-sm text-red-500">
+                  {errors.password.message}
+                </p>
+              )}
             </div>
 
+            {/* Remember Me */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Checkbox
-                  id="remember"
-                  checked={formData.rememberMe}
-                  onCheckedChange={(checked) => 
-                    setFormData({ ...formData, rememberMe: checked as boolean })
-                  }
+                  checked={rememberMe}
+                  onCheckedChange={(v) => setValue("rememberMe", Boolean(v))}
                 />
-                <Label htmlFor="remember" className="text-sm cursor-pointer">
-                  Remember me
-                </Label>
+                <Label className="text-sm cursor-pointer">Remember me</Label>
               </div>
               <Link
                 to="/forgot-password"
-                className="text-sm text-champagne hover:underline"
+                className="text-sm text-accent hover:text-accent/80 hover:underline transition-colors"
               >
                 Forgot password?
               </Link>
             </div>
 
+            {/* Submit */}
             <Button
               type="submit"
-              disabled={isLoading}
-              className="btn-premium text-primary-foreground w-full h-12 text-base"
+              disabled={!isValid || loading}
+              className="btn-premium w-full h-12"
             >
-              {isLoading ? (
+              {loading ? (
                 <span className="flex items-center gap-2">
                   <motion.span
                     animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    transition={{
+                      duration: 1,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
                   >
                     ◇
                   </motion.span>
@@ -146,44 +230,39 @@ const Login = () => {
               <div className="w-full h-px bg-border" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="bg-background px-4 text-muted-foreground">or continue with</span>
+              <span className="bg-background px-4 text-muted-foreground">
+                or continue with
+              </span>
             </div>
           </div>
 
           {/* Social Login */}
           <div className="grid grid-cols-2 gap-4">
             <Button variant="outline" className="h-12 rounded-xl">
-              <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
               Google
             </Button>
             <Button variant="outline" className="h-12 rounded-xl">
-              <svg className="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-              </svg>
               GitHub
             </Button>
           </div>
 
-          {/* Sign Up Link */}
+          {/* Sign Up */}
           <p className="text-center text-muted-foreground mt-8">
-            Don't have an account?{" "}
-            <Link to="/register" className="text-champagne hover:underline font-medium">
+            Don&apos;t have an account?{" "}
+            <Link
+              to="/signup"
+              className="text-accent hover:underline font-medium"
+            >
               Create account
             </Link>
           </p>
         </motion.div>
       </div>
 
-      {/* Right Panel - Visual */}
+      {/* Right Panel - Visual (UNCHANGED) */}
       <div className="hidden lg:flex flex-1 bg-primary relative overflow-hidden items-center justify-center">
-        {/* Decorative Elements */}
         <div className="absolute inset-0">
-          <div className="absolute top-1/4 -right-20 w-80 h-80 bg-champagne/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/4 -right-20 w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
           <div className="absolute bottom-1/4 -left-20 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
         </div>
 
@@ -192,30 +271,17 @@ const Login = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.8, type: "spring" }}
-            className="w-32 h-32 mx-auto mb-8 rounded-3xl bg-champagne/20 flex items-center justify-center"
+            className="w-32 h-32 mx-auto mb-8 rounded-3xl bg-accent/20 flex items-center justify-center"
           >
-            <Diamond className="h-16 w-16 text-champagne" />
+            <Diamond className="h-16 w-16 text-accent" />
           </motion.div>
           <h2 className="font-display text-3xl md:text-4xl font-semibold text-primary-foreground mb-4">
             Secure Trading Platform
           </h2>
           <p className="text-primary-foreground/70 max-w-md mx-auto text-lg">
-            Access the world's most trusted diamond trading marketplace with verified traders and secure transactions.
+            Access the world&apos;s most trusted diamond trading marketplace
+            with verified traders and secure transactions.
           </p>
-
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 mt-12">
-            {[
-              { value: "500+", label: "Verified Traders" },
-              { value: "$2.4B+", label: "Trading Volume" },
-              { value: "99.8%", label: "Success Rate" },
-            ].map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="font-display text-2xl font-semibold text-champagne">{stat.value}</div>
-                <div className="text-sm text-primary-foreground/60 mt-1">{stat.label}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>

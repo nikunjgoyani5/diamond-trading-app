@@ -56,7 +56,7 @@ const Header = () => {
               onClick={() => navigate("/login")}>
                 Sign In
               </Button>
-              <Button className="btn-premium text-primary-foreground px-6 "onClick={() => navigate("/register")}>
+              <Button className="btn-premium text-primary-foreground px-6 "onClick={() => navigate("/signup")}>
                 Get Started
               </Button>
             </div>

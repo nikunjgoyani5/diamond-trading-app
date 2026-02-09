@@ -1,0 +1,127 @@
+import { Routes, Route, Outlet } from "react-router-dom";
+
+/* Public */
+import Index from "@/pages/LandingPage";
+import Login from "@/pages/auth/Login";
+import Signup from "@/pages/auth/Signup";
+import VerifyOTP from "@/pages/auth/VerifyOtp";
+import ResendOTP from "@/pages/auth/ResendOtp";
+import ForgotPassword from "@/pages/auth/ForgotPassword";
+
+/* KYC Pages */
+import KycStart from "@/pages/kyc/KycStart";
+import PersonalDetails from "@/pages/kyc/PersonalDetails";
+import DocumentUpload from "@/pages/kyc/DocumentUpload";
+import ReviewSubmit from "@/pages/kyc/ReviewSubmit";
+import KycStatus from "@/pages/kyc/KycStatus";
+
+/* Layouts */
+import UserRoutes from "./UserRoutes";
+// import AdminRoutes from "./AdminRoutes";
+import ProtectedRoute from "@/routes/ProtectedRoute";
+import PublicRoute from "@/routes/PublicRoute";
+import KycRoute from "@/routes/KycRoute";
+
+/* User Pages */
+import UserDashboard from "@/pages/user/dashboard/UserDashboard";
+import Marketplace from "@/pages/user/marketplace/Marketplace";
+import UserPreferences from "@/pages/user/preferences/UserPreferences";
+import MyInventory from "@/pages/user/inventory/MyInventory";
+import AddInventory from "@/pages/user/inventory/AddInventory";
+import MyListings from "@/pages/user/listings/MyListings";
+import CreateListing from "@/pages/user/listings/CreateListing";
+import MyBids from "@/pages/user/bids/MyBids";
+import BidsOnMyListings from "@/pages/user/bids-received/BidsOnMyListings";
+import BidsReceivedDetail from "@/pages/user/bids-received/components/BidsReceivedDetail";
+
+/* Other */
+import Unauthorized from "@/pages/Unauthorized";
+
+const AppRoutes = () => {
+  return (
+    <Routes>
+      {/* ---------- PUBLIC (Unauthenticated only) ---------- */}
+      <Route path="/" element={<Index />} />
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/signup"
+        element={
+          <PublicRoute>
+            <Signup />
+          </PublicRoute>
+        }
+      />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+
+      {/* ---------- OTP ROUTES (Authenticated but OTP NOT verified) ---------- */}
+      <Route
+        path="/verify-otp"
+        element={
+          <ProtectedRoute allowUnverified={true}>
+            <VerifyOTP />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/resend-otp"
+        element={
+          <ProtectedRoute allowUnverified={true}>
+            <ResendOTP />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ---------- KYC ROUTES (Authenticated + OTP verified) ---------- */}
+      <Route
+        path="/kyc"
+        element={
+          <KycRoute>
+            <Outlet />
+          </KycRoute>
+        }
+      >
+        <Route path="start" element={<KycStart />} />
+        <Route path="personal-details" element={<PersonalDetails />} />
+        <Route path="document-upload" element={<DocumentUpload />} />
+        <Route path="review-submit" element={<ReviewSubmit />} />
+        <Route path="status" element={<KycStatus />} />
+      </Route>
+
+      {/* ---------- USER ROUTES (Dashboard, marketplace, etc.) ---------- */}
+      <Route
+        path="/user"
+        element={
+          <ProtectedRoute>
+            <UserRoutes />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<UserDashboard />} />
+        <Route path="marketplace" element={<Marketplace />} />
+        <Route path="preferences" element={<UserPreferences />} />
+        <Route path="inventory" element={<MyInventory />} />
+        <Route path="inventory/add" element={<AddInventory />} />
+        <Route path="listings" element={<MyListings />} />
+        <Route path="listings/create" element={<CreateListing />} />
+        <Route path="bids" element={<MyBids />} />
+        <Route path="bids/received" element={<BidsOnMyListings />} />
+        <Route
+          path="bids/received/:listingId"
+          element={<BidsReceivedDetail />}
+        />
+      </Route>
+
+      {/* ---------- FALLBACK ---------- */}
+      <Route path="/unauthorized" element={<Unauthorized />} />
+    </Routes>
+  );
+};
+
+export default AppRoutes;

@@ -8,7 +8,7 @@
 @layer base {
   :root {
     /* Core Brand Colors - Diamond Inspired Palette */
-    --background: 220 20% 98%;
+    --background: 220 20% 98%;    /*Deep charcoal / midnight blue*/
     --foreground: 220 25% 12%;
 
     --card: 0 0% 100%;
@@ -18,7 +18,7 @@
     --popover-foreground: 220 25% 12%;
 
     /* Midnight Blue - Primary Brand */
-    --primary: 220 45% 20%;
+    --primary: 220 45% 20%;                   /*Midnight Blue / Deep Steel Blue*/
     --primary-foreground: 45 30% 96%;
 
     /* Pearl Grey - Secondary */
@@ -302,3 +302,9 @@
     background: hsl(var(--champagne));
   }
 }
+
+.navupr {
+  position: relative;
+  top: -47px;
+}
+
