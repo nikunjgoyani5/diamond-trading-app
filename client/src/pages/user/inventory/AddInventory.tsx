@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
 import { Link, useNavigate } from "react-router-dom";
 
-import { inventorySchema } from "@/utils/schemas/inventory.schema";
+import { inventorySchema } from "@/schemas/inventory.schema";
 
 import {
   ArrowLeft,

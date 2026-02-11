@@ -11,6 +11,9 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { kycActions } from "@/store/slices/kycSlice";
+import { useAppDispatch } from "@/hooks/redux";
+
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -107,6 +110,13 @@ type PersonalDetailsForm = z.infer<typeof personalDetailsSchema>;
 
 const PersonalDetails = () => {
   const navigate = useNavigate();
+    const dispatch = useAppDispatch();
+
+  const handleSkipKyc = () => {
+    dispatch(kycActions.skipKyc());
+    navigate("/user", { replace: true });
+  };
+  
 
   const {
     register,
@@ -117,10 +127,10 @@ const PersonalDetails = () => {
     mode: "onChange",
   });
 
-  const onSubmit = (data: PersonalDetailsForm) => {
-    console.log("KYC Data:", data);
-    navigate("/kyc/document-upload");
-  };
+const onSubmit = (data: PersonalDetailsForm) => {
+  dispatch(kycActions.goToStep("DOCUMENT_UPLOAD"));
+  navigate("/kyc/document-upload");
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-[radial-gradient(ellipse_at_top,_hsl(var(--accent)/0.2),_transparent_65%)]
@@ -244,7 +254,7 @@ const PersonalDetails = () => {
               <Button
               variant="ghost"
               className="flex justify-center text-muted-foreground"
-              onClick={() => navigate("/user")}
+              onClick={handleSkipKyc}
             >
              Skip for now
             </Button> 

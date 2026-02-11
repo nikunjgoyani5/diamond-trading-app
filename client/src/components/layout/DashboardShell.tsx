@@ -1,38 +1,31 @@
 import { useState } from "react";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
+import { useAppSelector } from "@/hooks/redux";
 
 interface DashboardShellProps {
   children: React.ReactNode;
 }
-
 const DashboardShell = ({ children }: DashboardShellProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const role = useAppSelector((state: any) => state.auth.user?.role);
 
-  const role: "user" = "user"; // 👈 USER SHELL
 
   return (
-    <div className="min-h-screen bg-background ">
-      {/* Mobile Header */}
+    <div className="min-h-screen bg-background">
       <Navbar
         role={role}
         sidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
       />
 
-      {/* Desktop Sidebar */}
-      <Sidebar role={role} />
-
-      {/* Mobile Sidebar */}
       <Sidebar
         role={role}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        isMobile
       />
 
-      {/* Main Content */}
-      <main className="lg:ml-64 pt-16 lg:pt-0 min-h-screen navupr">
+      <main className="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
         {children}
       </main>
     </div>

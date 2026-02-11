@@ -14,10 +14,7 @@ export const ENDPOINTS = {  AUTH: {
   },
 
 KYC: {
-  STATUS: "/kyc/status",
-  PERSONAL_DETAILS: "/kyc/personal-details",
-  DOCUMENTS: "/kyc/documents",
-  SUBMIT: "/kyc/submit",
-},
+    SUBMIT: "/submit-kyc",
+  },
 
 };

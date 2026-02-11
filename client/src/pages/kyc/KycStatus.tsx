@@ -11,13 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import type { ReactNode, ElementType } from "react";
+import { useEffect } from "react";
+import { useAppSelector } from "@/hooks/redux";
 
 /* ================= TYPES ================= */
 
 export type KycStatusType = "PENDING" | "APPROVED" | "REJECTED";
-
-/* 🔧 TEMP: replace with API value later */
-const KYC_STATUS: KycStatusType = "PENDING";
 
 /* ================= CONFIG ================= */
 
@@ -33,11 +32,11 @@ const STATUS_CONFIG = {
         You'll be notified once verification is completed.
       </div>
     ),
-    action: (navigate) => (
+    action: (navigate: ReturnType<typeof useNavigate>) => (
       <Button
         variant="outline"
         className="px-8 h-12 rounded-xl"
-        onClick={() => navigate("/dashboard")}
+        onClick={() => navigate("/user")}
       >
         Go to Dashboard
       </Button>
@@ -51,7 +50,7 @@ const STATUS_CONFIG = {
       "Your identity has been successfully verified. You now have full access to trading features.",
     icon: CheckCircle2,
     infoBox: null,
-    action: (navigate) => (
+    action: (navigate: ReturnType<typeof useNavigate>) => (
       <Button
         className="btn-premium px-10 h-12 rounded-xl text-primary-foreground"
         onClick={() => navigate("/dashboard")}
@@ -74,7 +73,7 @@ const STATUS_CONFIG = {
         image.
       </div>
     ),
-    action: (navigate) => (
+    action: (navigate: ReturnType<typeof useNavigate>) => (
       <Button
         className="btn-premium px-10 h-12 rounded-xl text-primary-foreground"
         onClick={() => navigate("/kyc/start")}
@@ -100,7 +99,19 @@ const STATUS_CONFIG = {
 
 const KycStatus = () => {
   const navigate = useNavigate();
-  const config = STATUS_CONFIG[KYC_STATUS];
+
+  const { status } = useAppSelector((state) => state.kyc);
+
+  // 🚫 NOT_STARTED should never stay here
+  useEffect(() => {
+    if (status === "NOT_STARTED") {
+      navigate("/kyc/start", { replace: true });
+    }
+  }, [status, navigate]);
+
+  if (status === "NOT_STARTED") return null;
+
+  const config = STATUS_CONFIG[status as KycStatusType];
   const Icon = config.icon;
 
   return (

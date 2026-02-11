@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useAppDispatch } from "@/hooks/redux";
+import { kycActions } from "@/store/slices/kycSlice";
 import {
   UploadCloud,
   FileText,
@@ -14,6 +16,12 @@ import { cn } from "@/lib/utils";
 
 const DocumentUpload = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+
+  const handleSkipKyc = () => {
+    dispatch(kycActions.skipKyc());
+    navigate("/user", { replace: true });
+  };
 
   const [uploads, setUploads] = useState({
     govId: false,
@@ -22,6 +30,11 @@ const DocumentUpload = () => {
 
   const toggleUpload = (key: "govId" | "address") => {
     setUploads((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleContinue = () => {
+    dispatch(kycActions.goToStep("REVIEW_DOCUMENTS"));
+    navigate("/kyc/review-submit");
   };
 
   return (
@@ -99,10 +112,8 @@ const DocumentUpload = () => {
             </Button>
 
             <Button
-              size="lg"
-              className="btn-premium px-12 h-14 rounded-2xl text-primary-foreground font-semibold"
               disabled={!uploads.govId || !uploads.address}
-              onClick={() => navigate("/kyc/review-submit")}
+              onClick={handleContinue}
             >
               Continue
             </Button>
@@ -110,12 +121,10 @@ const DocumentUpload = () => {
             <Button
               variant="ghost"
               className="text-muted-foreground"
-              onClick={() => navigate("/user")}
+              onClick={handleSkipKyc}
             >
-             Skip for now
+              Skip for now
             </Button>
-
-          
           </div>
         </Card>
       </motion.div>

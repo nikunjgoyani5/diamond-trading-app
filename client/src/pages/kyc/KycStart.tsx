@@ -5,10 +5,31 @@ import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch } from "@/hooks/redux";
 import { kycActions } from "@/store/slices/kycSlice";
+import { useAppSelector } from "@/hooks/redux";
+import { useEffect } from "react";
 
 const KycStart = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+
+  const { status } = useAppSelector((state) => state.kyc);
+
+  useEffect(() => {
+    if (status === "APPROVED") {
+      navigate("/user", { replace: true });
+      return;
+    }
+
+    if (status === "PENDING" || status === "REJECTED") {
+      navigate("/kyc/status", { replace: true });
+      return;
+    }
+  }, [status, navigate]);
+
+const handleStart = () => {
+  dispatch(kycActions.goToStep("PERSONAL_DETAILS"));
+  navigate("/kyc/personal-details");
+};
 
   const handleSkipKyc = () => {
     dispatch(kycActions.skipKyc());
@@ -82,12 +103,8 @@ const KycStart = () => {
           <div className="flex justify-center">
             <Button
               size="lg"
-              className="
-                btn-premium
-                px-10 py-6 rounded-xl
-                text-primary-foreground
-              "
-              onClick={() => navigate("/kyc/personal-details")}
+              className="btn-premium px-10 py-6 rounded-xl text-primary-foreground"
+              onClick={handleStart}
             >
               Start KYC Verification
             </Button>

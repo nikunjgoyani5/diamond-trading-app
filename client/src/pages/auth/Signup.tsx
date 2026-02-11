@@ -2,13 +2,13 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { authActions } from "@/store/slices/authSlice";
+import { signupSchema, type SignupForm } from "@/schemas/auth/signup.schema";
 
-import { VALIDATION_PATTERNS } from "@/utils/validationHelpers";
 import { Diamond, Mail, Lock, Eye, EyeOff, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -16,54 +16,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
-/* ----------------------------- schema ----------------------------- */
-const signupSchema = z
-  .object({
-    name: z
-      .string()
-      .min(1, "Name is required")
-      .regex(
-        VALIDATION_PATTERNS.FULL_NAME.value,
-        VALIDATION_PATTERNS.FULL_NAME.message
-      ),
-
-    email: z
-      .string()
-      .min(1, "Email is required")
-      .regex(
-        VALIDATION_PATTERNS.EMAIL.value,
-        VALIDATION_PATTERNS.EMAIL.message
-      ),
-
-    password: z
-      .string()
-      .min(1, "Password is required")
-      .regex(
-        VALIDATION_PATTERNS.PASSWORD.value,
-        VALIDATION_PATTERNS.PASSWORD.message
-      ),
-
-    confirmPassword: z.string().min(1, "Please confirm your password"),
-
-    agreeTerms: z.boolean().refine((val) => val === true, {
-      message: "You must agree to the terms",
-    }),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
-
-type SignupForm = z.infer<typeof signupSchema>;
 
 const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const dispatch = useAppDispatch();
 
-  const { loading, error, isAuthenticated, otpVerified } = useAppSelector(
+  const { loading, error, signupSuccess, pendingVerificationEmail  } = useAppSelector(
     (state) => state.auth
   );
+
+  
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -86,18 +49,34 @@ const Signup = () => {
     },
   });
 
+  const fullState = useAppSelector((state) => state);
+console.log("FULL STATE:", fullState);
   const agreeTerms = watch("agreeTerms");
 
-  // Handle signup success - navigate to OTP verification
-  useEffect(() => {
-    if (isAuthenticated && !otpVerified) {
-      toast({
-        title: "Account created successfully 🎉",
-        description: "Please verify OTP to continue",
-      });
-      navigate("/verify-otp", { replace: true });
-    }
-  }, [isAuthenticated, otpVerified, navigate, toast]);
+useEffect(() => {
+  console.log("signupSuccess:", signupSuccess);
+  console.log("pendingVerificationEmail:", pendingVerificationEmail);
+
+  if (signupSuccess && pendingVerificationEmail) {
+
+    toast({
+      title: "Account created successfully 🎉",
+      description: "Please verify OTP to continue",
+    });
+
+    navigate("/verify-otp", {
+  replace: true,
+  state: {
+    email: pendingVerificationEmail,
+    mode: "VERIFY_EMAIL",
+  },
+});
+
+  }
+}, [signupSuccess, pendingVerificationEmail, navigate]);
+
+
+
 
   // Handle signup errors
   useEffect(() => {
@@ -120,6 +99,8 @@ const Signup = () => {
       })
     );
   };
+
+  
 
 
   return (

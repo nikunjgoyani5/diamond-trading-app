@@ -2,22 +2,14 @@ import { Navigate } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useAppSelector } from "@/hooks/redux";
 
-/**
- * PublicRoute
- * Used for: /login, /signup
- *
- * Flow supported:
- * Signup → Verify OTP → Login → KYC
- */
-const PublicRoute = ({ children }: { children: ReactNode }) => {
-  const auth = useAppSelector((state) => state.auth);
+interface PublicRouteProps {
+  children: ReactNode;
+}
 
-  const isAuthenticated = auth.isAuthenticated;
-  const otpVerified = auth.otpVerified;
-  const token = auth.token;
+const PublicRoute = ({ children }: PublicRouteProps) => {
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
 
-  // Fully logged-in users should not access login/signup
-  if (isAuthenticated && otpVerified && token) {
+  if (isAuthenticated) {
     return <Navigate to="/kyc/start" replace />;
   }
 

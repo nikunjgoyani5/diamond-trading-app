@@ -19,63 +19,47 @@ import {
 import { cn } from "@/lib/utils";
 import { userNav, userBottomNav } from "@/components/navigation/userNav";
 import { adminNav, adminBottomNav } from "@/components/navigation/adminNav";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { authActions } from "@/store/slices/authSlice";
+import { kycActions } from "@/store/slices/kycSlice";
 import { KycStatusBadge } from "@/components/KycStatusBadge";
-
+import api from "@/lib/api";
 
 interface SidebarProps {
-  role: "user" | "admin";
+  role?: "user" | "admin";
   isOpen?: boolean;
   onClose?: () => void;
-  isMobile?: boolean;
 }
 
-
-const Sidebar = ({
-  role,
-  isOpen = true,
-  onClose,
-  isMobile = false,
-}: SidebarProps) => {
+const Sidebar = ({ role, isOpen = false, onClose }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  
+  const user = useSelector((state: any) => state.auth.user);
+
   const handleLogout = () => {
-    dispatch(authActions.logout());  
-    navigate("/login", { replace: true }); 
+    if (onClose) onClose();
+
+    localStorage.removeItem("token");
+    sessionStorage.removeItem("token");
+    delete api.defaults.headers.common.Authorization;
+
+    dispatch(authActions.logout());
+    dispatch(kycActions.resetKycSession());
+
+    navigate("/login", { replace: true });
   };
 
-  // ✅ ROLE-BASED NAV (FIXED)
   const navItems = role === "admin" ? adminNav : userNav;
   const bottomNavItems = role === "admin" ? adminBottomNav : userBottomNav;
 
-  const NON_NESTING_ROUTES = [
-  "/user",
-  "/admin",
-  "/user/bids",
-];
+  const isActive = (href: string) =>
+    location.pathname === href ||
+    location.pathname.startsWith(href + "/");
 
-const isActive = (href: string) => {
-  // Exact match always wins
-  if (location.pathname === href) return true;
-
-  // Non-nesting routes should NOT stay active for subpaths
-  if (NON_NESTING_ROUTES.includes(href)) {
-    return false;
-  }
-
-  // Allow nesting for others
-  if (location.pathname.startsWith(href + "/")) {
-    return true;
-  }
-
-  return false;
-};
   const handleNavClick = () => {
-    if (isMobile && onClose) onClose();
+    if (onClose) onClose();
   };
 
   const homeLink = role === "admin" ? "/admin" : "/user";
@@ -104,7 +88,7 @@ const isActive = (href: string) => {
                   "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300",
                   isActive(item.href)
                     ? "bg-primary text-primary-foreground shadow-soft"
-                    : "text-muted-foreground hover:text-primary hover:bg-muted",
+                    : "text-muted-foreground hover:text-primary hover:bg-muted"
                 )}
               >
                 <item.icon className="h-5 w-5" />
@@ -127,7 +111,7 @@ const isActive = (href: string) => {
                   "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300",
                   isActive(item.href)
                     ? "bg-primary text-primary-foreground shadow-soft"
-                    : "text-muted-foreground hover:text-primary hover:bg-muted",
+                    : "text-muted-foreground hover:text-primary hover:bg-muted"
                 )}
               >
                 <item.icon className="h-5 w-5" />
@@ -137,47 +121,56 @@ const isActive = (href: string) => {
           ))}
         </ul>
 
-        {/* User Menu */}
-        {!isMobile ? (
+        {/* User Dropdown (Desktop Only) */}
+        <div className="hidden lg:block">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-muted transition-colors">
                 <Avatar className="h-10 w-10">
                   <AvatarImage src="" />
                   <AvatarFallback className="bg-accent/20 text-accent font-semibold">
-                    JD
+                    {user?.name?.charAt(0) || "U"}
                   </AvatarFallback>
                 </Avatar>
+
                 <div className="flex-1 text-left">
                   <div className="font-medium text-primary text-sm">
-                    John Doe
+                    {user?.name || "User"}
                   </div>
-                  <div className="text-xs text-muted-foreground flex items-center gap-2">
-                    {role === "admin" ? "Administrator" : "Verified Trader"}
+                  <div className="text-xs text-muted-foreground">
+                    {role === "admin"
+                      ? "Administrator"
+                      : "Verified Trader"}
                   </div>
                   <div className="mt-1">
                     <KycStatusBadge />
                   </div>
                 </div>
+
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
+
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem onClick={() => navigate("/profile")}>
                 <User className="h-4 w-4 mr-2" />
                 Profile
               </DropdownMenuItem>
+
               <DropdownMenuItem onClick={() => navigate("/kyc/start")}>
                 <Shield className="h-4 w-4 mr-2" />
                 KYC Verification
               </DropdownMenuItem>
+
               <DropdownMenuItem onClick={() => navigate("/settings")}>
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
               </DropdownMenuItem>
+
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={handleLogout}
+
+              <DropdownMenuItem
+                onSelect={handleLogout}
                 className="text-destructive"
               >
                 <LogOut className="h-4 w-4 mr-2" />
@@ -185,58 +178,60 @@ const isActive = (href: string) => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        ) : (
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-muted">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="bg-accent/20 text-accent font-semibold">
-                JD
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <div className="font-medium text-primary text-sm">John Doe</div>
-              <div className="text-xs text-muted-foreground">
-                {role === "admin" ? "Administrator" : "Verified Trader"}
-              </div>
+        </div>
+
+        {/* Mobile User Preview */}
+        <div className="lg:hidden flex items-center gap-3 p-3 rounded-xl bg-muted">
+          <Avatar className="h-10 w-10">
+            <AvatarFallback className="bg-accent/20 text-accent font-semibold">
+              {user?.name?.charAt(0) || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <div className="font-medium text-primary text-sm">
+              {user?.name || "User"}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {role === "admin" ? "Administrator" : "Verified Trader"}
             </div>
           </div>
-        )}
+        </div>
       </div>
     </>
   );
 
-  // Desktop
-  if (!isMobile) {
-    return (
+  return (
+    <>
+      {/* Desktop Sidebar */}
       <aside className="hidden lg:flex fixed top-0 left-0 bottom-0 w-64 flex-col bg-card border-r border-border z-40">
         <SidebarContent />
       </aside>
-    );
-  }
 
-  // Mobile
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="lg:hidden fixed inset-0 bg-black/50 z-40"
-          />
-          <motion.aside
-            initial={{ x: "-100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "-100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="lg:hidden fixed top-0 left-0 bottom-0 w-72 bg-card border-r border-border z-50 flex flex-col"
-          >
-            <SidebarContent />
-          </motion.aside>
-        </>
-      )}
-    </AnimatePresence>
+      {/* Mobile Sidebar */}
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={onClose}
+              className="lg:hidden fixed inset-0 bg-black/50 z-40"
+            />
+
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="lg:hidden fixed top-0 left-0 bottom-0 w-72 bg-card border-r border-border z-50 flex flex-col"
+            >
+              <SidebarContent />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 

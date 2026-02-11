@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Navigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Diamond, ShieldCheck, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,97 +12,117 @@ import { useToast } from "@/hooks/use-toast";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { authActions } from "@/store/slices/authSlice";
 
-const VerifyOTP = () => {
+type VerifyOtpMode = "VERIFY_EMAIL" | "FORGOT_PASSWORD";
+
+interface LocationState {
+  email: string;
+  mode: VerifyOtpMode;
+}
+
+const VerifyOtp = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useAppDispatch();
   const { toast } = useToast();
 
-  /* ======================
-     REDUX STATE (SOURCE OF TRUTH)
-  ====================== */
-  const { user, otpVerified, loading, error, isAuthenticated } =
-    useAppSelector((state) => state.auth);
+  const state = location.state as LocationState | undefined;
 
-  const email = user?.email;
+  /* ================= Validate Navigation State ================= */
 
-  /* ======================
-     LOCAL UI STATE
-  ====================== */
+  if (!state?.email || !state?.mode) {
+    return <Navigate to="/forgot-password" replace />;
+  }
+
+  const { email, mode } = state;
+
+  const { otpVerified, loading, error } = useAppSelector(
+    (state) => state.auth
+  );
+
   const [otp, setOtp] = useState("");
   const [countdown, setCountdown] = useState(60);
 
-  /* ======================
-     GUARD: AUTH REQUIRED
-  ====================== */
-  useEffect(() => {
-    if (!isAuthenticated || !email) {
-      navigate("/login", { replace: true });
-    }
-  }, [isAuthenticated, email, navigate]);
+  /* ================= Countdown ================= */
 
-  /* ======================
-     COUNTDOWN TIMER
-  ====================== */
   useEffect(() => {
     if (countdown <= 0) return;
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  /* ======================
-     NAVIGATE AFTER OTP SUCCESS
-  ====================== */
-  useEffect(() => {
-    if (otpVerified) {
-      toast({
-        title: "Email verified successfully ✅",
-        description: "Login for KYC verification",
-      });
-      navigate("/login", { replace: true });
-    }
-  }, [otpVerified, navigate, toast]);
+  /* ================= Reset States On Mount ================= */
 
-  /* ======================
-     ERROR HANDLING
-  ====================== */
   useEffect(() => {
-    if (error) {
-      toast({
-        title: "Verification failed",
-        description: error,
-        variant: "destructive",
-      });
-      dispatch(authActions.resetAuthError());
-    }
+    dispatch(authActions.resetAuthError());
+    dispatch(authActions.resetOtpState());
+  }, [dispatch]);
+
+  /* ================= Handle Errors ================= */
+
+  useEffect(() => {
+    if (!error) return;
+
+    toast({
+      title: "OTP verification failed",
+      description: error,
+      variant: "destructive",
+    });
+
+    dispatch(authActions.resetAuthError());
   }, [error, dispatch, toast]);
 
-  /* ======================
-     ACTION HANDLERS
-  ====================== */
+  /* ================= Handle Success ================= */
+
+  useEffect(() => {
+    if (!otpVerified) return;
+
+    toast({
+      title: "OTP Verified Successfully",
+      description:
+        mode === "VERIFY_EMAIL"
+          ? "You can now login."
+          : "You can now reset your password.",
+    });
+
+    if (mode === "VERIFY_EMAIL") {
+      navigate("/login", { replace: true });
+    } else {
+      // For FORGOT_PASSWORD mode, navigate to reset password
+      // Email and OTP are already stored in Redux state
+      navigate("/reset-password", { replace: true });
+    }
+
+    dispatch(authActions.resetOtpState());
+  }, [otpVerified, mode, navigate, dispatch, toast]);
+
+  /* ================= Handlers ================= */
+
   const handleVerify = () => {
-    if (!email || otp.length !== 6) return;
+    if (otp.length !== 6) return;
 
     dispatch(
       authActions.verifyOtpRequest({
         email,
         otp,
+        mode,
       })
     );
   };
 
   const handleResend = () => {
-    if (!email) return;
-    setCountdown(60);
     setOtp("");
+    setCountdown(60);
+
     dispatch(authActions.resendOtpRequest({ email }));
   };
 
-  /* ======================
-     UI (FROM 2nd CODE)
-  ====================== */
+  /* ================= UI ================= */
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-8 bg-background
-    bg-[radial-gradient(ellipse_at_top,_hsl(var(--accent)/0.38),_transparent_65%),linear-gradient(to_bottom,hsl(var(--background)),hsl(var(--background)))]">
+    <div
+      className="min-h-screen flex items-center justify-center p-8 bg-background
+      bg-[radial-gradient(ellipse_at_top,_hsl(var(--accent)/0.38),_transparent_65%),linear-gradient(to_bottom,hsl(var(--background)),hsl(var(--background)))]"
+    >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -118,7 +138,11 @@ const VerifyOTP = () => {
         <div className="card-premium p-8">
           <div className="text-center mb-6">
             <ShieldCheck className="h-10 w-10 mx-auto text-accent mb-4" />
-            <h1 className="text-2xl font-semibold">Verify Your Email</h1>
+            <h1 className="text-2xl font-semibold">
+              {mode === "VERIFY_EMAIL"
+                ? "Verify Your Email"
+                : "Verify Reset Code"}
+            </h1>
             <p className="text-muted-foreground mt-1">{email}</p>
           </div>
 
@@ -162,7 +186,7 @@ const VerifyOTP = () => {
           </div>
 
           <Link
-            to="/resend-otp"
+            to="/forgot-password"
             className="flex justify-center items-center gap-2 mt-6 text-sm text-muted-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -174,4 +198,4 @@ const VerifyOTP = () => {
   );
 };
 
-export default VerifyOTP;
+export default VerifyOtp;

@@ -1,42 +1,57 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Diamond, Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { VALIDATION_PATTERNS } from "@/utils/validationHelpers";
+import { authActions } from "@/store/slices/authSlice";
+import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 
 const ForgotPassword = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
+  const [localError, setLocalError] = useState("");
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const dispatch = useAppDispatch();
+  const { loading, error, forgotPasswordSuccess } = useAppSelector((state) => state.auth);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Required check
     if (!VALIDATION_PATTERNS.EMAIL.value.test(email)) {
-      setError(VALIDATION_PATTERNS.EMAIL.message);
+      setLocalError(VALIDATION_PATTERNS.EMAIL.message);
       return;
     }
 
-    // Format check
-    if (!VALIDATION_PATTERNS.EMAIL.value.test(email)) {
-      setError(VALIDATION_PATTERNS.EMAIL.message);
-      return;
-    }
-
-    // ✅ Validation passed
-    setError("");
-    setIsLoading(true);
-
-    setTimeout(() => {
-      setIsLoading(false);
-      setIsSubmitted(true);
-    }, 1500);
+    setLocalError("");
+    dispatch(authActions.forgotPasswordRequest({ email }));
   };
+
+  useEffect(() => {
+  dispatch(authActions.resetForgotPasswordState());
+}, [dispatch]);
+
+
+
+  /**
+   * ✅ Move to success UI only when
+   * request finished without error
+   */
+useEffect(() => {
+  if (!forgotPasswordSuccess) return;
+
+  navigate("/verify-otp", {
+    replace: true,
+    state: {
+      email,
+      mode: "FORGOT_PASSWORD",
+    },
+  });
+}, [forgotPasswordSuccess, navigate, email]);
+
 
   return (
     <div
@@ -88,21 +103,29 @@ const ForgotPassword = () => {
                       value={email}
                       onChange={(e) => {
                         setEmail(e.target.value);
-                        setError("");
+                        setLocalError("");
                       }}
                       className={`pl-12 h-12 rounded-xl ${
-                        error ? "border-red-500 focus-visible:ring-red-500" : ""
+                        localError || error
+                          ? "border-red-500 focus-visible:ring-red-500"
+                          : ""
                       }`}
                     />
                   </div>
+
+                  {(localError || error) && (
+                    <p className="text-sm text-red-500">
+                      {localError || error}
+                    </p>
+                  )}
                 </div>
 
                 <Button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={loading}
                   className="btn-premium text-primary-foreground w-full h-12 text-base"
                 >
-                  {isLoading ? (
+                  {loading ? (
                     <span className="flex items-center gap-2">
                       <motion.span
                         animate={{ rotate: 360 }}

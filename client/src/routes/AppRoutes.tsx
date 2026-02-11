@@ -4,9 +4,10 @@ import { Routes, Route, Outlet } from "react-router-dom";
 import Index from "@/pages/LandingPage";
 import Login from "@/pages/auth/Login";
 import Signup from "@/pages/auth/Signup";
-import VerifyOTP from "@/pages/auth/VerifyOtp";
-import ResendOTP from "@/pages/auth/ResendOtp";
+import VerifyOtp from "@/pages/auth/VerifyOtp";
+// import ResendOTP from "@/pages/auth/ResendOtp";
 import ForgotPassword from "@/pages/auth/ForgotPassword";
+import ResetPassword from "@/pages/auth/ResetPassword";
 
 /* KYC Pages */
 import KycStart from "@/pages/kyc/KycStart";
@@ -43,14 +44,6 @@ const AppRoutes = () => {
       {/* ---------- PUBLIC (Unauthenticated only) ---------- */}
       <Route path="/" element={<Index />} />
       <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <Login />
-          </PublicRoute>
-        }
-      />
-      <Route
         path="/signup"
         element={
           <PublicRoute>
@@ -58,33 +51,47 @@ const AppRoutes = () => {
           </PublicRoute>
         }
       />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
 
-      {/* ---------- OTP ROUTES (Authenticated but OTP NOT verified) ---------- */}
       <Route
         path="/verify-otp"
         element={
-          <ProtectedRoute allowUnverified={true}>
-            <VerifyOTP />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/resend-otp"
-        element={
-          <ProtectedRoute allowUnverified={true}>
-            <ResendOTP />
-          </ProtectedRoute>
+          <PublicRoute>
+            <VerifyOtp />
+          </PublicRoute>
         }
       />
 
-      {/* ---------- KYC ROUTES (Authenticated + OTP verified) ---------- */}
       <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <Login />
+          </PublicRoute>
+        }
+      />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* ---------- OTP ROUTES (Authenticated but OTP NOT verified) ---------- */}
+      
+      {/* <Route
+        path="/resend-otp"
+        element={
+          <ProtectedRoute>
+            <ResendOTP />
+          </ProtectedRoute>
+        }
+      /> */}
+
+      {/* ---------- KYC ROUTES (Authenticated + OTP verified) ---------- */}
+       <Route
         path="/kyc"
         element={
-          <KycRoute>
-            <Outlet />
-          </KycRoute>
+          <ProtectedRoute>
+            <KycRoute>
+              <Outlet />
+            </KycRoute>
+          </ProtectedRoute>
         }
       >
         <Route path="start" element={<KycStart />} />
@@ -95,7 +102,7 @@ const AppRoutes = () => {
       </Route>
 
       {/* ---------- USER ROUTES (Dashboard, marketplace, etc.) ---------- */}
-      <Route
+            <Route
         path="/user"
         element={
           <ProtectedRoute>

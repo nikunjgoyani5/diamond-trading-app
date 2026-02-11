@@ -1,16 +1,12 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-export type KycStatus =
-  | "NOT_STARTED"
-  | "PENDING"
-  | "APPROVED"
-  | "REJECTED";
+export type KycStatus = "NOT_STARTED" | "PENDING" | "APPROVED" | "REJECTED";
 
 export type KycStep =
   | "START"
   | "PERSONAL_DETAILS"
   | "DOCUMENT_UPLOAD"
-  | "REVIEW"
+  | "REVIEW_DOCUMENTS"
   | "STATUS";
 
 interface KycState {
@@ -19,6 +15,7 @@ interface KycState {
   currentStep: KycStep;
   loading: boolean;
   error: string | null;
+  rejectionReason?: string;
 }
 
 const initialState: KycState = {
@@ -33,84 +30,64 @@ const kycSlice = createSlice({
   name: "kyc",
   initialState,
   reducers: {
-    /* ---------- FETCH STATUS ---------- */
-    fetchKycStatusRequest(state) {
+    /* ---------- FRONTEND STEP CONTROL ---------- */
+    goToStep(state, action: PayloadAction<KycStep>) {
+      state.currentStep = action.payload;
+    },
+
+    /* ---------- SUBMIT FULL KYC ---------- */
+    submitKycRequest(state) {
       state.loading = true;
       state.error = null;
     },
-    fetchKycStatusSuccess(
-      state,
-      action: PayloadAction<{ status: KycStatus; step: KycStep }>
-    ) {
+
+    submitKycSuccess(state) {
       state.loading = false;
-      state.status = action.payload.status;
-      state.currentStep = action.payload.step;
-      state.skipped = action.payload.status === "PENDING" && state.skipped;
+      state.status = "PENDING"; // backend sets pending
+      state.currentStep = "STATUS";
+      state.skipped = false;
     },
-    fetchKycStatusFailure(state, action: PayloadAction<string>) {
+
+    submitKycFailure(state, action: PayloadAction<string>) {
       state.loading = false;
       state.error = action.payload;
     },
 
-    /* ---------- STEP SUBMISSIONS ---------- */
-    submitPersonalDetailsRequest(state) {
-      state.loading = true;
-      state.error = null;
-    },
-    submitPersonalDetailsSuccess(state) {
-      state.loading = false;
-      state.status = "PENDING";
-      state.currentStep = "DOCUMENT_UPLOAD";
-    },
-
-    submitDocumentsRequest(state) {
-      state.loading = true;
-      state.error = null;
-    },
-    submitDocumentsSuccess(state) {
-      state.loading = false;
-      state.currentStep = "REVIEW";
-    },
-
-    submitKycFinalRequest(state) {
-      state.loading = true;
-      state.error = null;
-    },
-    submitKycFinalSuccess(state) {
-      state.loading = false;
-      state.status = "PENDING";
-      state.currentStep = "STATUS";
-    },
-
-    /* ---------- ADMIN / BACKEND UPDATES ---------- */
+    /* ---------- ADMIN / BACKEND RESULT ---------- */
     markKycApproved(state) {
       state.status = "APPROVED";
       state.currentStep = "STATUS";
       state.skipped = false;
-      state.loading = false;
     },
 
-    markKycRejected(state, action: PayloadAction<string>) {
+    markKycRejected(
+      state,
+      action: PayloadAction<{ reason: string }>
+    ) {
       state.status = "REJECTED";
       state.currentStep = "STATUS";
-      state.loading = false;
-      state.error = action.payload;
+      state.rejectionReason = action.payload.reason;
     },
 
     /* ---------- SKIP KYC ---------- */
     skipKyc(state) {
-      state.status = "PENDING";
       state.skipped = true;
       state.currentStep = "STATUS";
-      state.loading = false;
     },
 
-    /* ---------- RESET ---------- */
-    resetKycError(state) {
+    /* ================= RESET ON LOGOUT ================= */
+    resetKycSession() {
+      // Reset to initial state on logout
+      return initialState;
+    },
+
+    /* ================= RESET ERROR ================= */
+    resetAuthError(state) {
       state.error = null;
     },
-  },
+}
 });
+
 
 export const kycActions = kycSlice.actions;
 export default kycSlice.reducer;

@@ -2,54 +2,44 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { authActions } from "@/store/slices/authSlice";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux";
+import { loginSchema, type LoginForm } from "@/schemas/auth/login.schema";
 
 import { Diamond, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 
-import { VALIDATION_PATTERNS } from "@/utils/validationHelpers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
-/* ----------------------------- schema ----------------------------- */
-const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .regex(VALIDATION_PATTERNS.EMAIL.value, VALIDATION_PATTERNS.EMAIL.message),
-  password: z
-    .string()
-    .min(1, "Password is required")
-    .regex(
-      VALIDATION_PATTERNS.PASSWORD.value,
-      VALIDATION_PATTERNS.PASSWORD.message,
-    ),
-  rememberMe: z.boolean().optional(),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
-
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-
   const dispatch = useAppDispatch();
- const { loading, error, isAuthenticated, token } = useAppSelector(
-  (state) => state.auth
-);
 
-useEffect(() => {
-  if (isAuthenticated && token) {
+  const { loading, error, isAuthenticated, token } = useAppSelector(
+    (state) => state.auth
+  );
+
+  /* ================= Reset stale error on mount ================= */
+
+  useEffect(() => {
+    dispatch(authActions.resetAuthError());
+  }, [dispatch]);
+
+  /* ================= Handle Successful Login ================= */
+
+  useEffect(() => {
+    if (!isAuthenticated || !token) return;
+
     navigate("/kyc/start", { replace: true });
-  }
-}, [isAuthenticated, token, navigate]);
+  }, [isAuthenticated, token, navigate]);
 
+  /* ================= Handle Login Error ================= */
 
   useEffect(() => {
     if (!error) return;
@@ -63,6 +53,7 @@ useEffect(() => {
     dispatch(authActions.resetAuthError());
   }, [error, dispatch, toast]);
 
+  /* ================= React Hook Form ================= */
 
   const {
     register,
@@ -82,16 +73,19 @@ useEffect(() => {
 
   const rememberMe = watch("rememberMe");
 
-const onSubmit = (data: LoginForm) => {
-  dispatch(
-    authActions.loginRequest({
-      email: data.email,
-      password: data.password,
-      rememberMe: data.rememberMe,
-    })
-  );
-};
+  /* ================= Submit Handler ================= */
 
+  const onSubmit = (data: LoginForm) => {
+    dispatch(
+      authActions.loginRequest({
+        email: data.email,
+        password: data.password,
+        rememberMe: data.rememberMe,
+      })
+    );
+  };
+
+  /* ================= UI (UNCHANGED) ================= */
 
   return (
     <div className="min-h-screen flex">
@@ -140,7 +134,9 @@ const onSubmit = (data: LoginForm) => {
                 />
               </div>
               {errors.email && (
-                <p className="text-sm text-red-500">{errors.email.message}</p>
+                <p className="text-sm text-red-500">
+                  {errors.email.message}
+                </p>
               )}
             </div>
 
@@ -161,7 +157,7 @@ const onSubmit = (data: LoginForm) => {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => setShowPassword((prev) => !prev)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
                 >
                   {showPassword ? (
@@ -183,9 +179,13 @@ const onSubmit = (data: LoginForm) => {
               <div className="flex items-center gap-2">
                 <Checkbox
                   checked={rememberMe}
-                  onCheckedChange={(v) => setValue("rememberMe", Boolean(v))}
+                  onCheckedChange={(v) =>
+                    setValue("rememberMe", Boolean(v))
+                  }
                 />
-                <Label className="text-sm cursor-pointer">Remember me</Label>
+                <Label className="text-sm cursor-pointer">
+                  Remember me
+                </Label>
               </div>
               <Link
                 to="/forgot-password"

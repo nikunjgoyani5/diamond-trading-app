@@ -4,7 +4,7 @@ import api from "@/lib/api";
 import { ENDPOINTS } from "@/services/endpoints";
 import { authActions } from "../slices/authSlice";
 
-/* ================= HELPERS ================= */
+/* ================= TOKEN HELPER ================= */
 
 function setAuthToken(token?: string, rememberMe?: boolean) {
   localStorage.removeItem("token");
@@ -22,14 +22,16 @@ function setAuthToken(token?: string, rememberMe?: boolean) {
   }
 }
 
-/* ================= REGISTER ================= */
+/* ================= SIGNUP ================= */
+
 function* signupWorker(
   action: PayloadAction<{ name: string; email: string; password: string }>
 ): Generator {
   try {
+    console.log("Signup success saga triggered");
+
     yield call(api.post, ENDPOINTS.AUTH.REGISTER, action.payload);
 
-    // user created but NOT verified yet
     yield put(
       authActions.signupSuccess({
         email: action.payload.email,
@@ -46,8 +48,13 @@ function* signupWorker(
 }
 
 /* ================= LOGIN ================= */
+
 function* loginWorker(
-  action: PayloadAction<{ email: string; password: string; rememberMe?: boolean }>
+  action: PayloadAction<{
+    email: string;
+    password: string;
+    rememberMe?: boolean;
+  }>
 ): Generator {
   try {
     const res: any = yield call(api.post, ENDPOINTS.AUTH.LOGIN, {
@@ -55,14 +62,7 @@ function* loginWorker(
       password: action.payload.password,
     });
 
-    /**
-     * Expected response:
-     * {
-     *   success: true,
-     *   data: { token, user, otpVerified }
-     * }
-     */
-    const { token, user: serverUser, otpVerified } = res.data.data;
+    const { token, user: serverUser } = res.data.data;
 
     const user = {
       id: serverUser._id,
@@ -77,23 +77,13 @@ function* loginWorker(
       authActions.loginSuccess({
         user,
         token,
-        otpVerified,
       })
     );
   } catch (err: any) {
     setAuthToken(undefined);
 
-    /**
-     * Email exists but not verified → OTP flow
-     */
+    // Email exists but not verified
     if (err.response?.data?.data?.isEmailVerified === false) {
-      yield put(
-        authActions.signupSuccess({
-          email: action.payload.email,
-          name: "",
-        })
-      );
-
       yield put(
         authActions.loginFailure(
           "Email not verified. Please verify your email."
@@ -111,39 +101,37 @@ function* loginWorker(
 }
 
 /* ================= VERIFY OTP ================= */
+
 function* verifyOtpWorker(
-  action: PayloadAction<{ email: string; otp: string }>
+  action: PayloadAction<{
+    email: string;
+    otp: string;
+    mode: "VERIFY_EMAIL" | "FORGOT_PASSWORD";
+  }>
 ): Generator {
   try {
-    const res: any = yield call(
-      api.post,
-      ENDPOINTS.AUTH.VERIFY_EMAIL,
-      action.payload
-    );
+    const { email, otp, mode } = action.payload;
 
-    /**
-     * Best practice:
-     * backend should return fresh token + user after OTP
-     */
-    const { token, user: serverUser } = res.data.data;
-
-    const user = serverUser
-      ? {
-          id: serverUser._id,
-          name: serverUser.name,
-          email: serverUser.email,
-          role: serverUser.role,
-        }
-      : undefined;
-
-    setAuthToken(token, true);
-
-    yield put(
-      authActions.verifyOtpSuccess({
-        token,
-        user,
-      })
-    );
+    // ONLY call API for VERIFY_EMAIL mode
+    if (mode === "VERIFY_EMAIL") {
+      yield call(api.post, ENDPOINTS.AUTH.VERIFY_EMAIL, {
+        email,
+        otp,
+      });
+      
+      yield put(authActions.verifyOtpSuccess({ mode }));
+    } else if (mode === "FORGOT_PASSWORD") {
+      // For FORGOT_PASSWORD mode:
+      // - Do NOT call /reset-password here (it requires newPassword)
+      // - Just mark OTP as verified in Redux and store the OTP
+      // - ResetPassword page will call /reset-password with all required fields
+      
+      yield put(authActions.verifyOtpSuccess({ mode, otp }));
+      
+      // Note: We're trusting the OTP is valid. The actual validation
+      // will happen when user submits the new password on ResetPassword page.
+      // If OTP is invalid, /reset-password will return 400 at that point.
+    }
   } catch (err: any) {
     yield put(
       authActions.verifyOtpFailure(
@@ -153,22 +141,50 @@ function* verifyOtpWorker(
   }
 }
 
+function* resetPasswordWorker(
+  action: PayloadAction<{
+    email: string;
+    otp: string;
+    newPassword: string;
+  }>
+): Generator {
+  try {
+    yield call(api.post, ENDPOINTS.AUTH.RESET_PASSWORD, {
+      email: action.payload.email,
+      otp: action.payload.otp,
+      newPassword: action.payload.newPassword,
+    });
+
+    yield put(authActions.resetPasswordSuccess());
+  } catch (err: any) {
+    yield put(
+      authActions.resetPasswordFailure(
+        err.response?.data?.message || "Password reset failed"
+      )
+    );
+  }
+}
+
+
+
+
+
+
+
+
 /* ================= RESEND OTP ================= */
+
 function* resendOtpWorker(
   action: PayloadAction<{ email: string }>
 ): Generator {
   try {
-    const res: any = yield call(
+    yield call(
       api.post,
       ENDPOINTS.AUTH.RESEND_OTP,
       action.payload
     );
 
-    yield put(
-      authActions.resendOtpSuccess({
-        message: res.data?.message || "OTP resent successfully",
-      })
-    );
+    yield put(authActions.resendOtpSuccess());
   } catch (err: any) {
     yield put(
       authActions.resendOtpFailure(
@@ -179,12 +195,18 @@ function* resendOtpWorker(
 }
 
 /* ================= FORGOT PASSWORD ================= */
+
 function* forgotPasswordWorker(
   action: PayloadAction<{ email: string }>
 ): Generator {
   try {
-    yield call(api.post, ENDPOINTS.AUTH.FORGOT_PASSWORD, action.payload);
-    yield put(authActions.forgotPasswordSuccess());
+    yield call(
+      api.post,
+      ENDPOINTS.AUTH.FORGOT_PASSWORD,
+      action.payload
+    );
+
+    yield put(authActions.forgotPasswordSuccess({ email: action.payload.email }));
   } catch (err: any) {
     yield put(
       authActions.forgotPasswordFailure(
@@ -194,17 +216,20 @@ function* forgotPasswordWorker(
   }
 }
 
-/* ================= LOGOUT ================= */
-function* logoutWorker(): Generator {
-  setAuthToken(undefined);
-}
+/* ================= WATCHERS ================= */
 
-/* ================= WATCHER ================= */
 export default function* authSaga(): Generator {
   yield takeLatest(authActions.signupRequest.type, signupWorker);
   yield takeLatest(authActions.loginRequest.type, loginWorker);
   yield takeLatest(authActions.verifyOtpRequest.type, verifyOtpWorker);
   yield takeLatest(authActions.resendOtpRequest.type, resendOtpWorker);
-  yield takeLatest(authActions.forgotPasswordRequest.type, forgotPasswordWorker);
-  yield takeLatest(authActions.logout.type, logoutWorker);
+  yield takeLatest(
+    authActions.forgotPasswordRequest.type,
+    forgotPasswordWorker
+  );
+  yield takeLatest(
+  authActions.resetPasswordRequest.type,
+  resetPasswordWorker
+);
+
 }
