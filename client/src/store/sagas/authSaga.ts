@@ -25,24 +25,23 @@ function setAuthToken(token?: string, rememberMe?: boolean) {
 /* ================= SIGNUP ================= */
 
 function* signupWorker(
-  action: PayloadAction<{ name: string; email: string; password: string }>
+  action: PayloadAction<{ name: string; email: string; password: string }>,
 ): Generator {
   try {
-    console.log("Signup success saga triggered");
+    yield put(authActions.startFlow("SIGNUP"));
 
     yield call(api.post, ENDPOINTS.AUTH.REGISTER, action.payload);
 
     yield put(
-      authActions.signupSuccess({
+      authActions.flowSuccess({
         email: action.payload.email,
-        name: action.payload.name,
-      })
+      }),
     );
   } catch (err: any) {
     yield put(
-      authActions.signupFailure(
-        err.response?.data?.message || "Signup failed"
-      )
+      authActions.flowFailure(
+        err.response?.data?.message || "Signup failed",
+      ),
     );
   }
 }
@@ -82,23 +81,28 @@ function* loginWorker(
   } catch (err: any) {
     setAuthToken(undefined);
 
-    // Email exists but not verified
-    if (err.response?.data?.data?.isEmailVerified === false) {
+    const status = err.response?.status;
+    const response = err.response?.data;
+
+    if (
+      status === 403 &&
+      response?.message?.toLowerCase().includes("email not verified")
+    ) {
+      yield put(authActions.startFlow("VERIFY_EMAIL"));
       yield put(
-        authActions.loginFailure(
-          "Email not verified. Please verify your email."
-        )
+        authActions.flowFailure("Email not verified. Please verify OTP.")
       );
       return;
     }
 
     yield put(
       authActions.loginFailure(
-        err.response?.data?.message || "Login failed"
+        response?.message || "Login failed"
       )
     );
   }
 }
+
 
 /* ================= VERIFY OTP ================= */
 
@@ -107,39 +111,68 @@ function* verifyOtpWorker(
     email: string;
     otp: string;
     mode: "VERIFY_EMAIL" | "FORGOT_PASSWORD";
-  }>
+  }>,
 ): Generator {
   try {
     const { email, otp, mode } = action.payload;
 
-    // ONLY call API for VERIFY_EMAIL mode
     if (mode === "VERIFY_EMAIL") {
+      yield put(authActions.startFlow("VERIFY_EMAIL"));
+
       yield call(api.post, ENDPOINTS.AUTH.VERIFY_EMAIL, {
         email,
         otp,
       });
-      
-      yield put(authActions.verifyOtpSuccess({ mode }));
-    } else if (mode === "FORGOT_PASSWORD") {
-      // For FORGOT_PASSWORD mode:
-      // - Do NOT call /reset-password here (it requires newPassword)
-      // - Just mark OTP as verified in Redux and store the OTP
-      // - ResetPassword page will call /reset-password with all required fields
-      
-      yield put(authActions.verifyOtpSuccess({ mode, otp }));
-      
-      // Note: We're trusting the OTP is valid. The actual validation
-      // will happen when user submits the new password on ResetPassword page.
-      // If OTP is invalid, /reset-password will return 400 at that point.
+
+      yield put(authActions.flowSuccess({ email }));
+    }
+
+    if (mode === "FORGOT_PASSWORD") {
+      yield put(authActions.startFlow("RESET_PASSWORD"));
+
+      // Do not call API yet (handled on actual reset)
+      yield put(authActions.flowSuccess({ email, otp }));
     }
   } catch (err: any) {
     yield put(
-      authActions.verifyOtpFailure(
-        err.response?.data?.message || "OTP verification failed"
+      authActions.flowFailure(
+        err.response?.data?.message || "OTP verification failed",
+      ),
+    );
+  }
+}
+
+/* ================= FORGOT PASSWORD ================= */
+
+
+function* forgotPasswordWorker(action: ReturnType<typeof authActions.forgotPasswordRequest>) {
+  try {
+    // 1️⃣ Start flow
+    yield put(authActions.startFlow("FORGOT_PASSWORD"));
+
+    // 2️⃣ Call API
+    yield call(api.post, "/auth/forgot-password", {
+      email: action.payload.email,
+    });
+
+    // 3️⃣ Success
+    yield put(
+      authActions.flowSuccess({
+        email: action.payload.email,
+      })
+    );
+
+  } catch (error: any) {
+    yield put(
+      authActions.flowFailure(
+        error.response?.data?.message || "Failed to send OTP"
       )
     );
   }
 }
+
+
+/* ================= RESET PASSWORD ================= */
 
 function* resetPasswordWorker(
   action: PayloadAction<{
@@ -149,69 +182,38 @@ function* resetPasswordWorker(
   }>
 ): Generator {
   try {
+    yield put(authActions.startFlow("RESET_PASSWORD"));
+
     yield call(api.post, ENDPOINTS.AUTH.RESET_PASSWORD, {
       email: action.payload.email,
       otp: action.payload.otp,
       newPassword: action.payload.newPassword,
     });
 
-    yield put(authActions.resetPasswordSuccess());
+    yield put(authActions.flowSuccess({}));
+
   } catch (err: any) {
     yield put(
-      authActions.resetPasswordFailure(
+      authActions.flowFailure(
         err.response?.data?.message || "Password reset failed"
       )
     );
   }
 }
-
-
-
-
-
-
 
 
 /* ================= RESEND OTP ================= */
 
 function* resendOtpWorker(
-  action: PayloadAction<{ email: string }>
+  action: PayloadAction<{ email: string }>,
 ): Generator {
   try {
-    yield call(
-      api.post,
-      ENDPOINTS.AUTH.RESEND_OTP,
-      action.payload
-    );
-
-    yield put(authActions.resendOtpSuccess());
+    yield call(api.post, ENDPOINTS.AUTH.RESEND_OTP, action.payload);
   } catch (err: any) {
     yield put(
-      authActions.resendOtpFailure(
-        err.response?.data?.message || "Failed to resend OTP"
-      )
-    );
-  }
-}
-
-/* ================= FORGOT PASSWORD ================= */
-
-function* forgotPasswordWorker(
-  action: PayloadAction<{ email: string }>
-): Generator {
-  try {
-    yield call(
-      api.post,
-      ENDPOINTS.AUTH.FORGOT_PASSWORD,
-      action.payload
-    );
-
-    yield put(authActions.forgotPasswordSuccess({ email: action.payload.email }));
-  } catch (err: any) {
-    yield put(
-      authActions.forgotPasswordFailure(
-        err.response?.data?.message || "Password reset failed"
-      )
+      authActions.flowFailure(
+        err.response?.data?.message || "Failed to resend OTP",
+      ),
     );
   }
 }
@@ -223,13 +225,6 @@ export default function* authSaga(): Generator {
   yield takeLatest(authActions.loginRequest.type, loginWorker);
   yield takeLatest(authActions.verifyOtpRequest.type, verifyOtpWorker);
   yield takeLatest(authActions.resendOtpRequest.type, resendOtpWorker);
-  yield takeLatest(
-    authActions.forgotPasswordRequest.type,
-    forgotPasswordWorker
-  );
-  yield takeLatest(
-  authActions.resetPasswordRequest.type,
-  resetPasswordWorker
-);
-
+  yield takeLatest(authActions.forgotPasswordRequest.type, forgotPasswordWorker);
+  yield takeLatest(authActions.resetPasswordRequest.type, resetPasswordWorker);
 }

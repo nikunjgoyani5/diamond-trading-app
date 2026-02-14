@@ -16,17 +16,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
-
 const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const dispatch = useAppDispatch();
 
-  const { loading, error, signupSuccess, pendingVerificationEmail  } = useAppSelector(
-    (state) => state.auth
-  );
-
-  
+  const { loading, error, flow } = useAppSelector((state) => state.auth);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -49,45 +44,38 @@ const Signup = () => {
     },
   });
 
-  const fullState = useAppSelector((state) => state);
-console.log("FULL STATE:", fullState);
   const agreeTerms = watch("agreeTerms");
 
-useEffect(() => {
-  console.log("signupSuccess:", signupSuccess);
-  console.log("pendingVerificationEmail:", pendingVerificationEmail);
+  useEffect(() => {
+    if (flow.type === "SIGNUP" && flow.status === "SUCCESS") {
+      toast({
+        title: "Account created successfully 🎉",
+        description: "Please verify OTP to continue",
+      });
 
-  if (signupSuccess && pendingVerificationEmail) {
+      navigate("/verify-otp", {
+        replace: true,
+        state: {
+          email: flow.email,
+          mode: "VERIFY_EMAIL",
+        },
+      });
 
-    toast({
-      title: "Account created successfully 🎉",
-      description: "Please verify OTP to continue",
-    });
-
-    navigate("/verify-otp", {
-  replace: true,
-  state: {
-    email: pendingVerificationEmail,
-    mode: "VERIFY_EMAIL",
-  },
-});
-
-  }
-}, [signupSuccess, pendingVerificationEmail, navigate]);
-
-
-
+      dispatch(authActions.resetFlow());
+    }
+  }, [flow, navigate, dispatch, toast]);
 
   // Handle signup errors
   useEffect(() => {
-    if (error) {
-      toast({
-        title: "Signup failed",
-        description: error,
-        variant: "destructive",
-      });
-      dispatch(authActions.resetAuthError());
-    }
+    if (!error) return;
+
+    toast({
+      title: "Signup failed",
+      description: error,
+      variant: "destructive",
+    });
+
+    dispatch(authActions.resetFlow());
   }, [error, dispatch, toast]);
 
   const onSubmit = (data: SignupForm) => {
@@ -96,12 +84,9 @@ useEffect(() => {
         name: data.name,
         email: data.email,
         password: data.password,
-      })
+      }),
     );
   };
-
-  
-
 
   return (
     <div className="min-h-screen flex">

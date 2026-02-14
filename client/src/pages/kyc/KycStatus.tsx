@@ -7,12 +7,15 @@ import {
   ArrowRight,
   ShieldCheck,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import type { ReactNode, ElementType } from "react";
 import { useEffect } from "react";
-import { useAppSelector } from "@/hooks/redux";
+
+import { useAppSelector, useAppDispatch } from "@/hooks/redux";
+import { kycActions } from "@/store/slices/kycSlice";
 
 /* ================= TYPES ================= */
 
@@ -47,12 +50,12 @@ const STATUS_CONFIG = {
     badge: "Verification Successful",
     title: "KYC Approved",
     description:
-      "Your identity has been successfully verified. You now have full access to trading features.",
+      "Your identity has been successfully verified.",
     icon: CheckCircle2,
     infoBox: null,
     action: (navigate: ReturnType<typeof useNavigate>) => (
       <Button
-        className="btn-premium px-10 h-12 rounded-xl text-primary-foreground"
+        className="btn-premium px-10 h-12 rounded-xl"
         onClick={() => navigate("/dashboard")}
       >
         Go to Dashboard
@@ -69,13 +72,12 @@ const STATUS_CONFIG = {
     icon: XCircle,
     infoBox: (
       <div className="mb-8 p-4 rounded-2xl bg-destructive/10 border border-destructive text-sm text-destructive">
-        Reason: Uploaded document image was unclear. Please upload a clearer
-        image.
+        Please upload clearer documents.
       </div>
     ),
     action: (navigate: ReturnType<typeof useNavigate>) => (
       <Button
-        className="btn-premium px-10 h-12 rounded-xl text-primary-foreground"
+        className="btn-premium px-10 h-12 rounded-xl"
         onClick={() => navigate("/kyc/start")}
       >
         Resubmit KYC
@@ -99,10 +101,16 @@ const STATUS_CONFIG = {
 
 const KycStatus = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
   const { status } = useAppSelector((state) => state.kyc);
 
-  // 🚫 NOT_STARTED should never stay here
+  /* 🔹 fetch latest status */
+  useEffect(() => {
+    dispatch(kycActions.fetchKycStatusRequest());
+  }, [dispatch]);
+
+  /* 🔹 redirect if not started */
   useEffect(() => {
     if (status === "NOT_STARTED") {
       navigate("/kyc/start", { replace: true });
@@ -115,44 +123,38 @@ const KycStatus = () => {
   const Icon = config.icon;
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-[radial-gradient(ellipse_at_top,_hsl(var(--accent)/0.25),_transparent_60%)]">
+    <div className="min-h-screen flex items-center justify-center px-4
+    bg-[radial-gradient(ellipse_at_top,_hsl(var(--accent)/0.38),_transparent_65%),linear-gradient(to_bottom,hsl(var(--background)),hsl(var(--background)))]">
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
         className="w-full max-w-xl"
       >
-        <Card className="card-premium glass p-10 text-center">
-          {/* TRUST BADGE */}
+        <Card className="p-10 text-center">
           <div className="flex justify-center mb-6">
-            <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-accent text-accent-foreground shadow-sm">
+            <span className="badge">
               <ShieldCheck className="h-4 w-4" />
               {config.badge}
             </span>
           </div>
 
-          {/* ICON */}
           <div className="mx-auto mb-6 h-16 w-16 rounded-full bg-accent flex items-center justify-center">
-            <Icon className="h-8 w-8 text-accent-foreground" />
+            <Icon className="h-8 w-8" />
           </div>
 
-          <h1 className="text-3xl font-semibold mb-3">{config.title}</h1>
+          <h1 className="text-2xl font-semibold mb-3">
+            {config.title}
+          </h1>
 
-          <p className="text-muted-foreground max-w-md mx-auto mb-8">
+          <p className="text-muted-foreground mb-8">
             {config.description}
           </p>
 
           {config.infoBox}
 
-          <div className="section-divider mb-8" />
-
-          <div className="flex justify-center">
+          <div className="flex justify-center mt-6">
             {config.action(navigate)}
           </div>
-
-          <p className="text-xs text-muted-foreground mt-6">
-            Secure • Confidential • Compliance Verified
-          </p>
         </Card>
       </motion.div>
     </div>

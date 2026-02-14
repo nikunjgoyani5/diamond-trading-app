@@ -1,5 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
+/* ================= TYPES ================= */
+
 export type KycStatus = "NOT_STARTED" | "PENDING" | "APPROVED" | "REJECTED";
 
 export type KycStep =
@@ -9,14 +11,27 @@ export type KycStep =
   | "REVIEW_DOCUMENTS"
   | "STATUS";
 
+interface KycDocuments {
+  aadhaarFile?: File;
+  panFile?: File;
+  selfieFile?: File | null;
+  aadhaarNumber?: string;
+  panNumber?: string;
+}
+
+
 interface KycState {
   status: KycStatus;
   skipped: boolean;
   currentStep: KycStep;
   loading: boolean;
   error: string | null;
-  rejectionReason?: string;
+  rejectionReason: string | null;
+  personalDetails?: Record<string, any>;
+  documents?: KycDocuments;
 }
+
+/* ================= INITIAL STATE ================= */
 
 const initialState: KycState = {
   status: "NOT_STARTED",
@@ -24,26 +39,37 @@ const initialState: KycState = {
   currentStep: "START",
   loading: false,
   error: null,
+  rejectionReason: null,
 };
+
+/* ================= SLICE ================= */
 
 const kycSlice = createSlice({
   name: "kyc",
   initialState,
   reducers: {
-    /* ---------- FRONTEND STEP CONTROL ---------- */
+    /* ---------- UI STEP CONTROL ---------- */
     goToStep(state, action: PayloadAction<KycStep>) {
       state.currentStep = action.payload;
     },
 
-    /* ---------- SUBMIT FULL KYC ---------- */
-    submitKycRequest(state) {
+    /* ---------- SUBMIT KYC ---------- */
+    submitKycRequest(
+      state,
+      _action: PayloadAction<{
+        aadhaarFile: File;
+        panFile: File;
+        selfieFile?: File | null;
+        aadhaarNumber: string;
+        panNumber: string;
+      }>,
+    ) {
       state.loading = true;
-      state.error = null;
     },
 
-    submitKycSuccess(state) {
+    submitKycSuccess(state, action: PayloadAction<{ status: KycStatus }>) {
       state.loading = false;
-      state.status = "PENDING"; // backend sets pending
+      state.status = action.payload.status;
       state.currentStep = "STATUS";
       state.skipped = false;
     },
@@ -53,41 +79,57 @@ const kycSlice = createSlice({
       state.error = action.payload;
     },
 
-    /* ---------- ADMIN / BACKEND RESULT ---------- */
-    markKycApproved(state) {
-      state.status = "APPROVED";
-      state.currentStep = "STATUS";
-      state.skipped = false;
+    /* ---------- FETCH STATUS ---------- */
+    fetchKycStatusRequest(state) {
+      state.loading = true;
     },
 
-    markKycRejected(
+    setKycStatus(
       state,
-      action: PayloadAction<{ reason: string }>
+      action: PayloadAction<{
+        status: KycStatus;
+        rejectionReason?: string | null;
+      }>,
     ) {
-      state.status = "REJECTED";
+      state.loading = false;
+      state.status = action.payload.status;
+      state.rejectionReason = action.payload.rejectionReason ?? null;
       state.currentStep = "STATUS";
-      state.rejectionReason = action.payload.reason;
     },
 
-    /* ---------- SKIP KYC ---------- */
+    fetchKycStatusFailure(state) {
+      state.loading = false;
+    },
+
+    /* ---------- PERSONAL DETAILS ---------- */
+    setPersonalDetails(state, action: PayloadAction<Record<string, any>>) {
+      state.personalDetails = action.payload;
+    },
+
+    /* ---------- DOCUMENT METADATA ONLY ---------- */
+    setDocuments(state, action: PayloadAction<Partial<KycDocuments>>) {
+      state.documents = {
+        ...state.documents,
+        ...action.payload,
+      };
+    },
+
+    /* ---------- SKIP ---------- */
     skipKyc(state) {
       state.skipped = true;
       state.currentStep = "STATUS";
     },
 
-    /* ================= RESET ON LOGOUT ================= */
+    /* ---------- RESET ---------- */
     resetKycSession() {
-      // Reset to initial state on logout
       return initialState;
     },
 
-    /* ================= RESET ERROR ================= */
-    resetAuthError(state) {
+    resetKycError(state) {
       state.error = null;
     },
-}
+  },
 });
-
 
 export const kycActions = kycSlice.actions;
 export default kycSlice.reducer;

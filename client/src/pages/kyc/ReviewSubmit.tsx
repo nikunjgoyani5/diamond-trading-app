@@ -1,162 +1,130 @@
 import { motion } from "framer-motion";
-import { CheckCircle2, FileText, User, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { useAppDispatch, useAppSelector } from "@/hooks/redux";
-import { kycActions } from "@/store/slices/kycSlice";
+import { useAppSelector } from "@/hooks/redux";
 import { useEffect } from "react";
+import { useAppDispatch } from "@/hooks/redux";
+import { kycActions } from "@/store/slices/kycSlice";
 
-// Helper components for displaying info
-const InfoRow = ({ label, value, full = false }: { label: string; value: string; full?: boolean }) => (
-  <div className={full ? "col-span-full" : ""}>
-    <dt className="text-muted-foreground mb-1">{label}</dt>
-    <dd className="font-medium text-primary">{value}</dd>
-  </div>
-);
-
-const DocRow = ({ label }: { label: string }) => (
-  <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
-    <span className="font-medium text-primary">{label}</span>
-    <CheckCircle2 className="h-5 w-5 text-green-500" />
-  </div>
-);
+/* ================= Component ================= */
 
 const ReviewSubmit = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  const { status, loading } = useAppSelector((state) => state.kyc);
+  const { personalDetails, documents, loading, status } = useAppSelector(
+    (state) => state.kyc,
+  );
 
-  // TODO: Replace with actual form data from Redux when implemented
-  // For now, using placeholder data
-  const personalDetails = {
-    fullName: "Vidhi Doctor",
-    dateOfBirth: "12 April 2003",
-    phoneNumber: "+91 98765 43210",
-    country: "India",
-    address: "Ahmedabad, Gujarat – 380015",
-  };
-
-  const documents = {
-    governmentId: "Aadhaar Card",
-    addressProof: "PAN Card",
-  };
-
+  /* ---------- Redirect if missing data ---------- */
   useEffect(() => {
-  console.log("KYC STATUS:", status);
-}, [status]);
-
-  /* ---------- SUBMIT ---------- */
-  const handleSubmit = () => {
-    // Dispatch the final KYC submission action
-    dispatch(kycActions.submitKycRequest());
-    navigate("/user");
-  };
-
-  /* ---------- REDIRECT ON SUCCESS ---------- */
-  useEffect(() => {
-    if (status === "PENDING") {
-      navigate("/kyc/status", { replace: true });
+    if (!personalDetails) {
+      navigate("/kyc/personal-details", { replace: true });
+      return;
     }
-  }, [status, navigate]);
+
+    if (!documents) {
+      navigate("/kyc/document-upload", { replace: true });
+      return;
+    }
+  }, [personalDetails, documents, navigate]);
+
+  useEffect(() => {
+  if (
+    status === "PENDING" ||
+    status === "APPROVED" ||
+    status === "REJECTED"
+  ) {
+    navigate("/kyc/status");
+  }
+}, [status, navigate]);
+
+
+  if (!personalDetails || !documents) return null;
+
+  /* ---------- Mask Aadhaar ---------- */
+  const maskAadhaar = (num?: string) => {
+    if (!num) return "";
+    return num.replace(/\d(?=\d{4})/g, "*");
+  };
+
+  const fullName = `${personalDetails.firstName} ${personalDetails.lastName}`;
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-[radial-gradient(ellipse_at_top,_hsl(var(--accent)/0.38),_transparent_65%),linear-gradient(to_bottom,hsl(var(--background)),hsl(var(--background)))]">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12">
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+        transition={{ duration: 0.6 }}
         className="w-full max-w-2xl"
       >
-        <Card className="card-premium glass bg-card p-8 lg:p-12 rounded-[2rem]">
+        <Card className="p-10 rounded-3xl space-y-8">
           {/* Header */}
-          <header className="text-center mb-12">
-            <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-accent text-accent-foreground shadow-sm mb-4">
-              Step 3 of 3 · Identity
-            </span>
-
-            <div className="flex items-center justify-center gap-3 mb-3">
-              <div className="p-2 rounded-xl bg-primary/5">
-                <ShieldCheck className="h-7 w-7 text-primary" />
-              </div>
-              <h1 className="text-3xl font-semibold">Review Documents</h1>
-            </div>
-
-            <p className="text-muted-foreground max-w-sm mx-auto">
-              Please verify your information carefully before submitting for
-              verification.
-            </p>
-          </header>
-
-          {/* Review Sections (UI unchanged) */}
-          <div className="space-y-8">
-            <div className="rounded-2xl border p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <User className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-primary">
-                  Personal Information
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                <InfoRow label="Full Name" value={personalDetails.fullName} />
-                <InfoRow label="Date of Birth" value={personalDetails.dateOfBirth} />
-                <InfoRow label="Phone Number" value={personalDetails.phoneNumber} />
-                <InfoRow label="Country" value={personalDetails.country} />
-                <InfoRow
-                  label="Address"
-                  value={personalDetails.address}
-                  full
-                />
-              </div>
-            </div>
-
-            <div className="rounded-2xl border p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <FileText className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-primary">
-                  Uploaded Documents
-                </h3>
-              </div>
-
-              <div className="flex flex-col gap-3 text-sm">
-                <DocRow label={documents.governmentId} />
-                <DocRow label={documents.addressProof} />
-              </div>
-            </div>
+          <div className="text-center">
+            <ShieldCheck className="h-8 w-8 text-primary mx-auto mb-3" />
+            <h2 className="text-2xl font-semibold">Review & Submit</h2>
           </div>
 
-          {/* Confirmation */}
-          <div className="mt-10 p-4 rounded-2xl bg-accent/30 border border-accent flex gap-4">
-            <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              By submitting, you confirm that the information provided is
-              accurate and belongs to you. Verification may take up to 24-48
-              hours.
+          {/* Personal Info */}
+          <div className="border rounded-2xl p-6 space-y-2 text-sm">
+            <h3 className="font-semibold text-primary mb-2">
+              Personal Information
+            </h3>
+            <p>
+              <strong>Name:</strong> {fullName}
+            </p>
+            <p>
+              <strong>Phone:</strong> {personalDetails.phone}
+            </p>
+            <p>
+              <strong>Country:</strong> {personalDetails.country}
+            </p>
+            <p>
+              <strong>Address:</strong> {personalDetails.address}
+            </p>
+          </div>
+
+          {/* Identity Info */}
+          <div className="border rounded-2xl p-6 space-y-2 text-sm">
+            <h3 className="font-semibold text-primary mb-2">
+              Identity Details
+            </h3>
+            <p>
+              <strong>Aadhaar:</strong> {maskAadhaar(documents.aadhaarNumber)}
+            </p>
+            <p>
+              <strong>PAN:</strong> {documents.panNumber}
             </p>
           </div>
 
           {/* Footer */}
-          <div className="mt-12 flex items-center justify-between border-t pt-8">
-            <Button variant="ghost" onClick={() => navigate(-1)}>
-              Back
-            </Button>
-
+          <div className="flex justify-between pt-6 border-t">
             <Button
               variant="ghost"
-              onClick={() => navigate("/kyc/personal-details")}
+              onClick={() => navigate("/kyc/document-upload")}
             >
               Edit
             </Button>
 
             <Button
-              size="lg"
-              className="btn-premium px-12 h-14 rounded-2xl text-primary-foreground font-semibold"
-              onClick={handleSubmit}
               disabled={loading}
+              onClick={() => {
+                if (!documents?.aadhaarFile || !documents?.panFile) return;
+
+                dispatch(
+                  kycActions.submitKycRequest({
+                    aadhaarFile: documents.aadhaarFile,
+                    panFile: documents.panFile,
+                    selfieFile: documents.selfieFile || null,
+                    aadhaarNumber: documents.aadhaarNumber!,
+                    panNumber: documents.panNumber!,
+                  }),
+                );
+              }}
             >
-              {loading ? "Submitting..." : "Submit for Verification"}
+              {loading ? "Submitting..." : "Submit"}
             </Button>
           </div>
         </Card>

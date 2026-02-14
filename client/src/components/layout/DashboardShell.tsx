@@ -25,7 +25,7 @@ const DashboardShell = ({ children }: DashboardShellProps) => {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <main className="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
+      <main className="lg:ml-64 min-h-screen">
         {children}
       </main>
     </div>

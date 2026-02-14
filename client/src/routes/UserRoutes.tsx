@@ -6,7 +6,8 @@ const UserRoutes = () => {
       {/* <Sidebar /> */}
       <div className="flex-1">
         {/* <Navbar /> */}
-        <main className="pt-16 px-6">
+        <main className="p-6">
+
           <Outlet />
         </main>
       </div>

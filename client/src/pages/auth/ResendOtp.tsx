@@ -13,46 +13,60 @@ const ResendOTP = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const dispatch = useAppDispatch();
-
-  const { loading, error, user } = useAppSelector((state) => state.auth);
-
   const [email, setEmail] = useState("");
 
-  // Pre-fill email from Redux if available
+  const { loading, error, flow, user } = useAppSelector((state) => state.auth);
+
+  /* Pre-fill email */
   useEffect(() => {
     if (user?.email) {
       setEmail(user.email);
     }
   }, [user]);
 
-  // Handle errors
+  /* Reset flow on mount */
   useEffect(() => {
-    if (error) {
-      toast({
-        title: "Failed to send OTP",
-        description: error,
-        variant: "destructive",
-      });
-      dispatch(authActions.resetAuthError());
-    }
+    dispatch(authActions.resetFlow());
+  }, [dispatch]);
+
+  /* Handle errors */
+  useEffect(() => {
+    if (!error) return;
+
+    toast({
+      title: "Failed to send OTP",
+      description: error,
+      variant: "destructive",
+    });
+
+    dispatch(authActions.resetFlow());
   }, [error, dispatch, toast]);
+
+  /* Handle success */
+  useEffect(() => {
+    if (flow.type === "VERIFY_EMAIL" && flow.status === "SUCCESS") {
+      toast({
+        title: "OTP Sent",
+        description: "A verification code has been sent to your email.",
+      });
+
+      navigate("/verify-otp", {
+        replace: true,
+        state: {
+          email: flow.email ?? email,
+          mode: "VERIFY_EMAIL",
+        },
+      });
+
+      dispatch(authActions.resetFlow());
+    }
+  }, [flow, navigate, email, dispatch, toast]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!email) return;
 
     dispatch(authActions.resendOtpRequest({ email }));
-
-    toast({
-      title: "OTP Sent",
-      description: "A verification code has been sent to your email.",
-    });
-
-    // Navigate to verify-otp after a short delay
-    setTimeout(() => {
-      navigate("/verify-otp", { replace: true });
-    }, 800);
   };
 
   return (

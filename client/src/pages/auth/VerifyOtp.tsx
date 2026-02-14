@@ -35,9 +35,7 @@ const VerifyOtp = () => {
 
   const { email, mode } = state;
 
-  const { otpVerified, loading, error } = useAppSelector(
-    (state) => state.auth
-  );
+  const { loading, error, flow } = useAppSelector((state) => state.auth);
 
   const [otp, setOtp] = useState("");
   const [countdown, setCountdown] = useState(60);
@@ -50,12 +48,6 @@ const VerifyOtp = () => {
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  /* ================= Reset States On Mount ================= */
-
-  useEffect(() => {
-    dispatch(authActions.resetAuthError());
-    dispatch(authActions.resetOtpState());
-  }, [dispatch]);
 
   /* ================= Handle Errors ================= */
 
@@ -68,32 +60,29 @@ const VerifyOtp = () => {
       variant: "destructive",
     });
 
-    dispatch(authActions.resetAuthError());
+    dispatch(authActions.resetFlow());
   }, [error, dispatch, toast]);
 
   /* ================= Handle Success ================= */
+useEffect(() => {
+  if (flow.status !== "SUCCESS") return;
 
-  useEffect(() => {
-    if (!otpVerified) return;
-
-    toast({
-      title: "OTP Verified Successfully",
-      description:
-        mode === "VERIFY_EMAIL"
-          ? "You can now login."
-          : "You can now reset your password.",
+  if (mode === "VERIFY_EMAIL") {
+    navigate("/login", { replace: true });
+  } else {
+    navigate("/reset-password", {
+      replace: true,
+      state: { email, otp },
     });
+  }
 
-    if (mode === "VERIFY_EMAIL") {
-      navigate("/login", { replace: true });
-    } else {
-      // For FORGOT_PASSWORD mode, navigate to reset password
-      // Email and OTP are already stored in Redux state
-      navigate("/reset-password", { replace: true });
-    }
+  dispatch(authActions.resetFlow());
+}, [flow.status]);
 
-    dispatch(authActions.resetOtpState());
-  }, [otpVerified, mode, navigate, dispatch, toast]);
+useEffect(() => {
+  console.log("VERIFY aFLOW:", flow.type, flow.status);
+}, [flow]);
+
 
   /* ================= Handlers ================= */
 
@@ -105,7 +94,7 @@ const VerifyOtp = () => {
         email,
         otp,
         mode,
-      })
+      }),
     );
   };
 
@@ -141,7 +130,7 @@ const VerifyOtp = () => {
             <h1 className="text-2xl font-semibold">
               {mode === "VERIFY_EMAIL"
                 ? "Verify Your Email"
-                : "Verify Reset Code"}
+                : "verify OTP to Reset Password"}
             </h1>
             <p className="text-muted-foreground mt-1">{email}</p>
           </div>

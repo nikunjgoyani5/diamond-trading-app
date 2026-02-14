@@ -4,6 +4,7 @@ import multer from "multer";
 import { sendResponse } from "../utils/api.response";
 
 export const submitKyc = async (req: any, res: any, next: any) => {
+
   try {
     const files = req.files;
 

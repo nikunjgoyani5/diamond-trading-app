@@ -1,217 +1,119 @@
 import { motion } from "framer-motion";
-import {
-  User,
-  Phone,
-  MapPin,
-  Calendar,
-  Globe,
-} from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { kycActions } from "@/store/slices/kycSlice";
-import { useAppDispatch } from "@/hooks/redux";
 
+import { kycActions } from "@/store/slices/kycSlice";
+import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import { VALIDATION_PATTERNS } from "@/utils/validationHelpers";
+import {
+  personalDetailsSchema,
+  type PersonalDetailsType
+} from "@/schemas/kyc/kyc.schema";
 
-const CURRENT_YEAR = new Date().getFullYear();
-
-const personalDetailsSchema = z.object({
-  firstName: z
-    .string()
-    .min(1, "Required")
-    .regex(
-      VALIDATION_PATTERNS.NAME_PART.value,
-      VALIDATION_PATTERNS.NAME_PART.message
-    ),
-
-  middleName: z
-    .string()
-    .optional()
-    .refine(
-      (val) =>
-        !val || VALIDATION_PATTERNS.NAME_PART.value.test(val),
-      {
-        message: VALIDATION_PATTERNS.NAME_PART.message,
-      }
-    ),
-
-  lastName: z
-    .string()
-    .min(1, "Required")
-    .regex(
-      VALIDATION_PATTERNS.NAME_PART.value,
-      VALIDATION_PATTERNS.NAME_PART.message
-    ),
-
-  dob: z
-    .string()
-    .min(1, "Required")
-    .refine((date) => {
-      const dob = new Date(date);
-      const age =
-        (Date.now() - dob.getTime()) /
-        (1000 * 60 * 60 * 24 * 365.25);
-
-      return (
-        dob.getFullYear() < CURRENT_YEAR &&
-        dob < new Date() &&
-        age >= 18
-      );
-    }, "Must be 18+ years old"),
-
-  phone: z.string().regex(
-    VALIDATION_PATTERNS.PHONE_10_DIGITS.value,
-    VALIDATION_PATTERNS.PHONE_10_DIGITS.message
-  ),
-
-  address: z
-    .string()
-    .min(1, "Required")
-    .regex(
-      VALIDATION_PATTERNS.NO_EDGE_SPACES.value,
-      VALIDATION_PATTERNS.NO_EDGE_SPACES.message
-    ),
-
-  city: z
-    .string()
-    .min(1, "Required")
-    .regex(
-      VALIDATION_PATTERNS.NO_EDGE_SPACES.value,
-      VALIDATION_PATTERNS.NO_EDGE_SPACES.message
-    ),
-
-  state: z
-    .string()
-    .min(1, "Required")
-    .regex(
-      VALIDATION_PATTERNS.NO_EDGE_SPACES.value,
-      VALIDATION_PATTERNS.NO_EDGE_SPACES.message
-    ),
-
-  pincode: z.string().regex(
-    VALIDATION_PATTERNS.PINCODE.value,
-    VALIDATION_PATTERNS.PINCODE.message
-  ),
-
-  country: z.string().min(1, "Country is required"),
-});
-
-type PersonalDetailsForm = z.infer<typeof personalDetailsSchema>;
-
+/* ================= COMPONENT ================= */
 
 const PersonalDetails = () => {
   const navigate = useNavigate();
-    const dispatch = useAppDispatch();
+  const dispatch = useAppDispatch();
+
+  const { status, personalDetails } = useAppSelector((state) => state.kyc);
+
+  /* ===== Redirect if already verified ===== */
+  useEffect(() => {
+    if (status === "APPROVED") {
+      navigate("/user", { replace: true });
+      return;
+    }
+
+    if (status === "PENDING" || status === "REJECTED") {
+      navigate("/kyc/status", { replace: true });
+      return;
+    }
+  }, [status, navigate]);
+
+  /* ===== FORM ===== */
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid }
+  } = useForm<PersonalDetailsType>({
+     defaultValues: personalDetails,
+    resolver: zodResolver(personalDetailsSchema),
+    mode: "onChange"
+  });
+
+  /* ===== SUBMIT ===== */
+  const onSubmit = (data: PersonalDetailsType) => {
+    // Save data in redux
+    dispatch(kycActions.setPersonalDetails(data));
+
+    // Move step forward
+    dispatch(kycActions.goToStep("DOCUMENT_UPLOAD"));
+
+    navigate("/kyc/document-upload");
+  };
 
   const handleSkipKyc = () => {
     dispatch(kycActions.skipKyc());
     navigate("/user", { replace: true });
   };
-  
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isValid },
-  } = useForm<PersonalDetailsForm>({
-    resolver: zodResolver(personalDetailsSchema),
-    mode: "onChange",
-  });
-
-const onSubmit = (data: PersonalDetailsForm) => {
-  dispatch(kycActions.goToStep("DOCUMENT_UPLOAD"));
-  navigate("/kyc/document-upload");
-};
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-[radial-gradient(ellipse_at_top,_hsl(var(--accent)/0.2),_transparent_65%)]
+    <div className="min-h-screen flex items-center justify-center px-4 py-12
     bg-[radial-gradient(ellipse_at_top,_hsl(var(--accent)/0.38),_transparent_65%),linear-gradient(to_bottom,hsl(var(--background)),hsl(var(--background)))]">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-3xl"
       >
-        <Card className="card-premium glass p-8 md:p-10 border-white/10 shadow-2xl">
-          {/* ================= Header ================= */}
+        <Card className="card-premium glass p-8 md:p-10">
           <div className="text-center mb-10">
-            <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full
-                bg-accent text-accent-foreground
-                shadow-sm mb-2">
-              Step 1 of 3 · Identity
-            </span>
-            <h1 className="text-3xl font-semibold mb-2">
-              Personal Information
-            </h1>
-            <p className="text-muted-foreground">
-              Ensure details match your government-issued ID.
-            </p>
+            <span className="badge">Step 1 of 3 · Identity</span>
+            <h1 className="text-3xl font-semibold">Personal Information</h1>
           </div>
 
-          {/* ================= Form ================= */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Name Section */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Field
-                label="First Name"
-                icon={<User className="h-4 w-4 text-primary" />}
-                error={errors.firstName?.message}
-              >
-                <Input {...register("firstName")} placeholder="John" />
+
+            {/* Name */}
+            <div className="grid md:grid-cols-3 gap-4">
+              <Field label="First Name" error={errors.firstName?.message}>
+                <Input {...register("firstName")} />
               </Field>
 
-              <Field
-                label="Middle Name"
-                error={errors.middleName?.message}
-              >
-                <Input {...register("middleName")} placeholder="Optional" />
+              <Field label="Middle Name" error={errors.middleName?.message}>
+                <Input {...register("middleName")} />
               </Field>
 
-              <Field
-                label="Last Name"
-                error={errors.lastName?.message}
-              >
-                <Input {...register("lastName")} placeholder="Doe" />
+              <Field label="Last Name" error={errors.lastName?.message}>
+                <Input {...register("lastName")} />
               </Field>
             </div>
 
-            {/* Contact Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field
-                label="Date of Birth"
-                icon={<Calendar className="h-4 w-4 text-primary" />}
-                error={errors.dob?.message}
-              >
+            {/* DOB + Phone */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <Field label="Date of Birth" error={errors.dob?.message}>
                 <Input type="date" {...register("dob")} />
               </Field>
 
-              <Field
-                label="Phone Number"
-                icon={<Phone className="h-4 w-4 text-primary" />}
-                error={errors.phone?.message}
-              >
-                <Input {...register("phone")} placeholder="+91-987654321" />
+              <Field label="Phone" error={errors.phone?.message}>
+                <Input {...register("phone")} />
               </Field>
             </div>
 
-            {/* Address Section */}
-            <Field
-              label="Residential Address"
-              icon={<MapPin className="h-4 w-4 text-primary" />}
-              error={errors.address?.message}
-            >
+            {/* Address */}
+            <Field label="Address" error={errors.address?.message}>
               <Input {...register("address")} />
             </Field>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid md:grid-cols-4 gap-4">
               <Field label="City" error={errors.city?.message}>
                 <Input {...register("city")} />
               </Field>
@@ -224,48 +126,23 @@ const onSubmit = (data: PersonalDetailsForm) => {
                 <Input {...register("pincode")} />
               </Field>
 
-              <Field
-                label="Country"
-                icon={<Globe className="h-4 w-4 text-primary" />}
-                error={errors.country?.message}
-              >
-                <select
-                  {...register("country")}
-                  className="h-11 w-full rounded-lg border bg-background px-3"
-                >
-                  <option value="">Select</option>
-                  <option value="India">India</option>
-                  <option value="United States">USA</option>
-                  <option value="Belgium">Belgium</option>
-                </select>
+              <Field label="Country" error={errors.country?.message}>
+                <Input {...register("country")} />
               </Field>
             </div>
 
             {/* Footer */}
-            <div className="mt-10 flex items-center justify-between border-t pt-8">
-              <Button
-                variant="ghost"
-                type="button"
-                onClick={() => navigate(-1)}
-              >
+            <div className="flex justify-between pt-6">
+              <Button type="button" onClick={() => navigate(-1)}>
                 Back
               </Button>
 
-              <Button
-              variant="ghost"
-              className="flex justify-center text-muted-foreground"
-              onClick={handleSkipKyc}
-            >
-             Skip for now
-            </Button> 
+              <Button type="button" variant="ghost" onClick={handleSkipKyc}>
+                Skip
+              </Button>
 
-              <Button
-                size="lg"
-                type="submit"
-                disabled={!isValid}
-                className="btn-premium px-12 h-12 rounded-xl"
-              >
-                Continue to Upload
+              <Button type="submit" disabled={!isValid}>
+                Continue
               </Button>
             </div>
           </form>
@@ -277,26 +154,19 @@ const onSubmit = (data: PersonalDetailsForm) => {
 
 export default PersonalDetails;
 
-/* ======================================================
-   Reusable Field Wrapper
-====================================================== */
+/* ================= FIELD ================= */
 const Field = ({
   label,
-  icon,
   error,
-  children,
+  children
 }: {
   label: string;
-  icon?: React.ReactNode;
   error?: string;
   children: React.ReactNode;
 }) => (
-  <div className="space-y-2">
-    <Label className="flex items-center gap-2">
-      {icon}
-      {label}
-    </Label>
+  <div className="space-y-1">
+    <Label>{label}</Label>
     {children}
-    {error && <p className="text-xs text-destructive">{error}</p>}
+    {error && <p className="text-xs text-red-500">{error}</p>}
   </div>
 );

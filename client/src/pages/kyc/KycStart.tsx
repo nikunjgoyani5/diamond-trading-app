@@ -3,18 +3,34 @@ import { ShieldCheck, FileCheck, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { useAppDispatch } from "@/hooks/redux";
+import { useAppDispatch, useAppSelector } from "@/hooks/redux";
 import { kycActions } from "@/store/slices/kycSlice";
-import { useAppSelector } from "@/hooks/redux";
 import { useEffect } from "react";
 
 const KycStart = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  const { status } = useAppSelector((state) => state.kyc);
+  const { status, loading } = useAppSelector((state) => state.kyc);
+
+  /* ===============================
+     FETCH STATUS ON PAGE LOAD
+  =============================== */
+  useEffect(() => {
+    dispatch(kycActions.fetchKycStatusRequest());
+  }, [dispatch]);
 
   useEffect(() => {
+  console.log("KYC STATE:", { status, loading });
+}, [status, loading]);
+
+
+  /* ===============================
+     REDIRECT BASED ON STATUS
+  =============================== */
+  useEffect(() => {
+    if (loading) return;
+
     if (status === "APPROVED") {
       navigate("/user", { replace: true });
       return;
@@ -24,18 +40,27 @@ const KycStart = () => {
       navigate("/kyc/status", { replace: true });
       return;
     }
-  }, [status, navigate]);
+  }, [status, loading, navigate]);
 
-const handleStart = () => {
-  dispatch(kycActions.goToStep("PERSONAL_DETAILS"));
-  navigate("/kyc/personal-details");
-};
+  /* ===============================
+     START KYC
+  =============================== */
+  const handleStart = () => {
+    dispatch(kycActions.goToStep("PERSONAL_DETAILS"));
+    navigate("/kyc/personal-details");
+  };
 
+  /* ===============================
+     SKIP KYC
+  =============================== */
   const handleSkipKyc = () => {
     dispatch(kycActions.skipKyc());
     navigate("/user", { replace: true });
   };
 
+  /* ===============================
+     UI
+  =============================== */
   return (
     <div
       className="
@@ -50,15 +75,9 @@ const handleStart = () => {
         className="w-full max-w-xl"
       >
         <Card className="card-premium glass p-10">
-          {/* Accent Trust Badge */}
+          {/* Badge */}
           <div className="flex justify-center mb-6">
-            <span
-              className="
-                inline-flex items-center gap-2 px-5 py-2 rounded-full
-                bg-accent text-accent-foreground
-                shadow-sm
-              "
-            >
+            <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-accent text-accent-foreground shadow-sm">
               <ShieldCheck className="h-4 w-4" />
               Identity Verification Required
             </span>
@@ -71,8 +90,7 @@ const handleStart = () => {
 
           <p className="text-muted-foreground text-center max-w-md mx-auto mb-10">
             To ensure secure diamond trading and enable escrow-backed payments,
-            identity verification is required before accessing platform
-            features.
+            identity verification is required before accessing platform features.
           </p>
 
           {/* Benefits */}
@@ -81,7 +99,7 @@ const handleStart = () => {
               <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center">
                 <FileCheck className="h-4 w-4 text-accent-foreground" />
               </div>
-              <p className="text-sm text-foreground ">
+              <p className="text-sm text-foreground">
                 List diamonds and participate in verified marketplace bidding
               </p>
             </div>
@@ -96,31 +114,31 @@ const handleStart = () => {
             </div>
           </div>
 
-          {/* Divider */}
           <div className="section-divider mb-8" />
 
-          {/* CTA */}
+          {/* Start button */}
           <div className="flex justify-center">
             <Button
               size="lg"
-              className="btn-premium px-10 py-6 rounded-xl text-primary-foreground"
+              className="btn-premium px-10 py-6 rounded-xl"
               onClick={handleStart}
+              disabled={loading}
             >
               Start KYC Verification
             </Button>
           </div>
 
-          {/* Subtext */}
           <p className="text-xs text-muted-foreground text-center mt-6">
             Secure • Confidential • Takes less than 2 minutes
           </p>
 
+          {/* Skip */}
           <div className="flex justify-end mt-4">
             <Button
               variant="ghost"
               size="sm"
-              className="text-muted-foreground hover:text-primary transition"
               onClick={handleSkipKyc}
+              disabled={loading}
             >
               Skip for now
             </Button>

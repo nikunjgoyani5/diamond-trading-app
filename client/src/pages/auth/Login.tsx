@@ -21,23 +21,32 @@ const Login = () => {
   const { toast } = useToast();
   const dispatch = useAppDispatch();
 
-  const { loading, error, isAuthenticated, token } = useAppSelector(
-    (state) => state.auth
+  const { isAuthenticated, token, error, loading, flow } = useAppSelector(
+    (state) => state.auth,
   );
 
   /* ================= Reset stale error on mount ================= */
 
   useEffect(() => {
-    dispatch(authActions.resetAuthError());
+    dispatch(authActions.resetFlow());
   }, [dispatch]);
 
   /* ================= Handle Successful Login ================= */
-
   useEffect(() => {
-    if (!isAuthenticated || !token) return;
+    if (flow.type === "VERIFY_EMAIL" && flow.status === "FAILURE") {
+      navigate("/verify-otp", {
+        replace: true,
+        state: {
+          email: flow.email,
+          mode: "VERIFY_EMAIL",
+        },
+      });
+    }
 
-    navigate("/kyc/start", { replace: true });
-  }, [isAuthenticated, token, navigate]);
+    if (isAuthenticated && token) {
+      navigate("/kyc/start", { replace: true });
+    }
+  }, [flow, isAuthenticated, token, navigate]);
 
   /* ================= Handle Login Error ================= */
 
@@ -50,7 +59,7 @@ const Login = () => {
       variant: "destructive",
     });
 
-    dispatch(authActions.resetAuthError());
+    dispatch(authActions.resetFlow());
   }, [error, dispatch, toast]);
 
   /* ================= React Hook Form ================= */
@@ -81,7 +90,7 @@ const Login = () => {
         email: data.email,
         password: data.password,
         rememberMe: data.rememberMe,
-      })
+      }),
     );
   };
 
@@ -134,9 +143,7 @@ const Login = () => {
                 />
               </div>
               {errors.email && (
-                <p className="text-sm text-red-500">
-                  {errors.email.message}
-                </p>
+                <p className="text-sm text-red-500">{errors.email.message}</p>
               )}
             </div>
 
@@ -179,13 +186,9 @@ const Login = () => {
               <div className="flex items-center gap-2">
                 <Checkbox
                   checked={rememberMe}
-                  onCheckedChange={(v) =>
-                    setValue("rememberMe", Boolean(v))
-                  }
+                  onCheckedChange={(v) => setValue("rememberMe", Boolean(v))}
                 />
-                <Label className="text-sm cursor-pointer">
-                  Remember me
-                </Label>
+                <Label className="text-sm cursor-pointer">Remember me</Label>
               </div>
               <Link
                 to="/forgot-password"

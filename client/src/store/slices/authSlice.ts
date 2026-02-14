@@ -1,6 +1,8 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import api from "@/lib/api";
 
+/* ---------------- TYPES ---------------- */
+
 export interface User {
   id: string;
   name: string;
@@ -8,144 +10,117 @@ export interface User {
   role: "user" | "admin";
 }
 
-interface LoginPayload {
-  email: string;
-  password: string;
-  rememberMe?: boolean;
-}
-
-interface SignupPayload {
-  name: string;
-  email: string;
-  password: string;
+interface AuthFlowState {
+  type: "NONE" | "SIGNUP" | "VERIFY_EMAIL" | "FORGOT_PASSWORD" | "RESET_PASSWORD";
+  status: "IDLE" | "LOADING" | "SUCCESS" | "FAILURE";
+  email?: string;
+  otp?: string;
 }
 
 interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  signupSuccess: boolean;
-  otpVerified: boolean;
-  forgotPasswordSuccess: boolean;
-  resetPasswordSuccess: boolean;
+
   loading: boolean;
   error: string | null;
-  pendingVerificationEmail: string | null;
-  pendingResetOtp: string | null; // Store OTP for reset password flow
+
+  flow: AuthFlowState;
 }
+
+/* ---------------- INITIAL STATE ---------------- */
 
 const initialState: AuthState = {
   user: null,
   token: null,
   isAuthenticated: false,
-  signupSuccess: false,
-  otpVerified: false,
-  forgotPasswordSuccess: false,
-  resetPasswordSuccess: false,
   loading: false,
   error: null,
-  pendingVerificationEmail: null,
-  pendingResetOtp: null,
+  flow: {
+    type: "NONE",
+    status: "IDLE",
+  },
 };
 
-/* -------- SLICE -------- */
+/* ---------------- SLICE ---------------- */
 
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    /* -------- SIGNUP -------- */
+    /* -------- REQUEST TRIGGERS (FOR SAGA) -------- */
 
-    signupRequest(state, _action: PayloadAction<SignupPayload>) {
-      state.loading = true;
-      state.error = null;
-      state.signupSuccess = false;
-      state.pendingVerificationEmail = null;
-
-    },
-
-    signupSuccess(state, action: PayloadAction<{ email: string; name: string }>) {
-      state.loading = false;
-      state.signupSuccess = true;
-      state.pendingVerificationEmail = action.payload.email;
-
-      state.user = {
-        id: "",
-        name: action.payload.name,
-        email: action.payload.email,
-        role: "user",
-      };
-
-      state.isAuthenticated = false;
-      state.otpVerified = false;
-      state.token = null;
-    },
-
-    signupFailure(state, action: PayloadAction<string>) {
-      state.loading = false;
-      state.error = action.payload;
-      state.signupSuccess = false;
-    },
-
-    /* -------- OTP VERIFY -------- */
+    signupRequest(
+      _state,
+      _action: PayloadAction<{ name: string; email: string; password: string }>
+    ) {},
 
     verifyOtpRequest(
-      state,
+      _state,
       _action: PayloadAction<{
         email: string;
         otp: string;
         mode: "VERIFY_EMAIL" | "FORGOT_PASSWORD";
       }>
-    ) {
-      state.loading = true;
+    ) {},
+
+    forgotPasswordRequest(
+      _state,
+      _action: PayloadAction<{ email: string }>
+    ) {},
+
+    resetPasswordRequest(
+      _state,
+      _action: PayloadAction<{ email: string; otp: string; newPassword: string }>
+    ) {},
+
+    resendOtpRequest(
+      _state,
+      _action: PayloadAction<{ email: string }>
+    ) {},
+
+    /* -------- FLOW MANAGEMENT -------- */
+
+    startFlow(state, action: PayloadAction<AuthFlowState["type"]>) {
+      state.flow = {
+        type: action.payload,
+        status: "LOADING",
+      };
       state.error = null;
     },
 
-    verifyOtpSuccess(
+    flowSuccess(
       state,
-      action: PayloadAction<{
-        mode: "VERIFY_EMAIL" | "FORGOT_PASSWORD";
-        otp?: string;
-      }>
+      action: PayloadAction<{ email?: string; otp?: string }>
     ) {
-      state.loading = false;
-      state.otpVerified = true;
-      
-      // Store OTP for forgot password flow (needed for reset password API call)
-      if (action.payload.mode === "FORGOT_PASSWORD" && action.payload.otp) {
-        state.pendingResetOtp = action.payload.otp;
-      }
+      state.flow.status = "SUCCESS";
+      state.flow.email = action.payload.email;
+      state.flow.otp = action.payload.otp;
     },
 
-    verifyOtpFailure(state, action: PayloadAction<string>) {
-      state.loading = false;
+    flowFailure(state, action: PayloadAction<string>) {
+      state.flow.status = "FAILURE";
       state.error = action.payload;
-      state.otpVerified = false;
     },
 
-    /* -------- RESEND-OTP -------- */
-
-    resendOtpRequest(state, _action: PayloadAction<{ email: string }>) {
-      state.loading = true;
+    resetFlow(state) {
+      state.flow = {
+        type: "NONE",
+        status: "IDLE",
+      };
       state.error = null;
-    },
-
-    resendOtpSuccess(state) {
-      state.loading = false;
-    },
-
-    resendOtpFailure(state, action: PayloadAction<string>) {
-      state.loading = false;
-      state.error = action.payload;
-    },
-
-    resetOtpState(state) {
-      state.otpVerified = false;
     },
 
     /* -------- LOGIN -------- */
 
-    loginRequest(state, _action: PayloadAction<LoginPayload>) {
+    loginRequest(
+      state,
+      _action: PayloadAction<{
+        email: string;
+        password: string;
+        rememberMe?: boolean;
+      }>
+    ) {
       state.loading = true;
       state.error = null;
     },
@@ -160,61 +135,7 @@ const authSlice = createSlice({
     loginFailure(state, action: PayloadAction<string>) {
       state.loading = false;
       state.error = action.payload;
-      state.isAuthenticated = false;
     },
-
-    /* -------- FORGOT PASSWORD -------- */
-
-    forgotPasswordRequest(state, _action: PayloadAction<{ email: string }>) {
-      state.loading = true;
-      state.error = null;
-      state.forgotPasswordSuccess = false;
-    },
-
-    forgotPasswordSuccess(state, action: PayloadAction<{ email: string }>) {
-      state.loading = false;
-      state.forgotPasswordSuccess = true;
-      state.pendingVerificationEmail = action.payload.email;
-    },
-
-    forgotPasswordFailure(state, action: PayloadAction<string>) {
-      state.loading = false;
-      state.error = action.payload;
-      state.forgotPasswordSuccess = false;
-    },
-
-    resetForgotPasswordState(state) {
-      state.forgotPasswordSuccess = false;
-    },
-
-    resetPasswordRequest(
-  state,
-  _action: PayloadAction<{
-    email: string;
-    otp: string;
-    newPassword: string;
-  }>
-) {
-  state.loading = true;
-  state.error = null;
-  state.resetPasswordSuccess = false;
-},
-
-    resetPasswordSuccess(state) {
-      state.loading = false;
-      state.resetPasswordSuccess = true;
-      // Clear pending data after successful reset
-      state.pendingVerificationEmail = null;
-      state.pendingResetOtp = null;
-      state.otpVerified = false;
-    },
-
-resetPasswordFailure(state, action: PayloadAction<string>) {
-  state.loading = false;
-  state.error = action.payload;
-  state.resetPasswordSuccess = false;
-},
-
 
     /* -------- LOGOUT -------- */
 
@@ -223,12 +144,6 @@ resetPasswordFailure(state, action: PayloadAction<string>) {
       sessionStorage.removeItem("token");
       delete api.defaults.headers.common.Authorization;
       return initialState;
-    },
-
-    /* -------- COMMON -------- */
-
-    resetAuthError(state) {
-      state.error = null;
     },
   },
 });
